@@ -26,6 +26,7 @@ var SAMPLE = {
     bName: 'Rebuilt / other make', bPrice: 13000000, bLife: 9000, bFit: 72, bLead: 90
   },
   ld: { rate: 0.5, cap: 10 },
+  abc: { a: 70, b: 90 },        // ABC cut-offs, % of yearly spend
   spares: [   // individual spares in the stores (made up)
     { code: 'MM-0101', item: 'Track shoe', machine: 'SH-01', store: 'Central store', price: 85000, stock: 6, onOrder: 0, use: 2, lead: 120, safety: 15, critical: 'High', lastIssued: '2026-11-10', life: 12000 },
     { code: 'MM-0102', item: 'Dipper tooth', machine: 'SH-01', store: 'Area store East', price: 42000, stock: 40, onOrder: 0, use: 8, lead: 60, safety: 15, critical: 'Medium', lastIssued: '2026-11-20', life: 0 },
@@ -469,6 +470,7 @@ function calcStock(sp) {
 }
 var spFilter = 'all', spSearch = '', spEditing = -1;
 function renderStock() {
+  var abc = calcAbc().byIndex;
   var all = sparesList().map(function (sp, i) { return { sp: sp, r: calcStock(sp), i: i }; });
   var value = all.reduce(function (t, x) { return t + x.r.value; }, 0);
   var locked = all.reduce(function (t, x) { return t + x.r.locked; }, 0);
@@ -493,7 +495,7 @@ function renderStock() {
     else if (r.label === 'On order') say = num(sp.onOrder) + ' on order. Watch the delivery date under Late supplies.';
     else say = 'Enough for about ' + (isFinite(r.cover) ? r.cover.toFixed(1) + ' months' : 'a long time') + '.';
     return '<div class="panel"><div class="mcard"><div class="head"><div><h3>' + esc(sp.item) + '</h3><div class="sub">' + esc(sp.code) + ' · ' + esc(sp.machine) + ' · ' + esc(sp.store) + '</div></div><span class="pill ' + r.level + '">' + r.label + '</span></div></div>' +
-      '<div class="tags" style="margin-top:0"><span class="pill ' + ({ High: 'bad', Medium: 'warn', Low: 'plain' }[sp.critical] || 'plain') + '">Critical: ' + esc(sp.critical) + '</span><span class="pill plain">' + rs(num(sp.price)) + ' each</span></div>' +
+      '<div class="tags" style="margin-top:0"><span class="cls ' + abc[x.i] + '" title="ABC class">' + abc[x.i] + '</span><span class="pill ' + ({ High: 'bad', Medium: 'warn', Low: 'plain' }[sp.critical] || 'plain') + '">Critical: ' + esc(sp.critical) + '</span><span class="pill plain">' + rs(num(sp.price)) + ' each</span></div>' +
       '<div class="results" style="margin-top:4px">' +
       res('In stock' + (num(sp.onOrder) ? ' (+ ' + num(sp.onOrder) + ' on order)' : ''), String(num(sp.stock)), r.reorder ? 'bad' : '') +
       res('Reorder level', String(r.rol)) +
@@ -527,6 +529,74 @@ function sendToWorth(i) {
   if (num(sp.life) > 0) S.spare.aLife = num(sp.life);
   save(); buildSpare(); renderSpare();
   $('spare').scrollIntoView({ block: 'start' });
+}
+
+/* ---------------- ABC analysis ---------------- */
+function abcCuts() { if (!S.abc) S.abc = clone(SAMPLE.abc); return S.abc; }
+function calcAbc() {
+  var cut = abcCuts(), a = num(cut.a), b = Math.max(a, num(cut.b));
+  var rows = sparesList().map(function (sp, i) { return { sp: sp, i: i, yearly: num(sp.price) * num(sp.use) * 12 }; })
+    .sort(function (x, y) { return y.yearly - x.yearly; });
+  var total = rows.reduce(function (t, x) { return t + x.yearly; }, 0), run = 0, byIndex = {};
+  rows.forEach(function (x) {
+    var before = total > 0 ? run / total * 100 : 100;
+    run += x.yearly;
+    x.share = total > 0 ? x.yearly / total * 100 : 0;
+    x.cum = total > 0 ? run / total * 100 : 0;
+    x.cls = x.yearly <= 0 ? 'C' : before < a ? 'A' : before < b ? 'B' : 'C';
+    byIndex[x.i] = x.cls;
+  });
+  return { rows: rows, total: total, byIndex: byIndex };
+}
+var POLICY = {
+  A: { High: 'Vital and costly. Review every month. Rate contract with a reliable supplier, exact forecast, small safety stock, chase every order.',
+       Medium: 'Costly. Review every month. Buy close to need; avoid overstock.',
+       Low: 'Costly but not vital. Buy only against a firm need; question every indent.' },
+  B: { High: 'Keep a safety stock. Review every quarter.',
+       Medium: 'Normal reorder level. Review every quarter.',
+       Low: 'Normal reorder level; keep stock lean.' },
+  C: { High: 'Little yearly spend but vital: keep stock so it never runs out. If one piece is costly, treat it as an insurance spare.',
+       Medium: 'Buy in bulk once or twice a year.',
+       Low: 'Buy in bulk once a year; minimum paperwork.' }
+};
+function renderAbc() {
+  var cut = abcCuts(), r = calcAbc(), col = chartColors();
+  $('abcA').value = cut.a; $('abcB').value = cut.b;
+  var n = r.rows.length;
+  $('abcKpis').innerHTML = ['A', 'B', 'C'].map(function (c) {
+    var g = r.rows.filter(function (x) { return x.cls === c; });
+    var v = g.reduce(function (t, x) { return t + x.yearly; }, 0);
+    return '<div class="kpi"><div class="l"><span class="cls ' + c + '" style="width:22px;height:22px;font-size:12px">' + c + '</span> ' + g.length + ' spare' + (g.length === 1 ? '' : 's') + ' (' + (n ? Math.round(g.length / n * 100) : 0) + '% of items)</div><div class="v">' + rs(v) + '</div><div class="l">' + (r.total ? Math.round(v / r.total * 100) : 0) + '% of yearly spend</div></div>';
+  }).join('') + '<div class="kpi"><div class="l">Total yearly spend on these spares</div><div class="v">' + rs(r.total) + '</div></div>';
+
+  $('abcTable').innerHTML = '<thead><tr><th>Spare</th><th class="n">Yearly spend</th><th class="n">Running total</th><th class="n">Class</th></tr></thead><tbody>' +
+    r.rows.map(function (x) {
+      return '<tr><td>' + esc(x.sp.item) + '<br><small class="muted">' + esc(x.sp.code) + ' · ' + esc(x.sp.machine) + '</small></td><td class="n">' + rs(x.yearly) + '<br><small class="muted">' + x.share.toFixed(1) + '%</small></td><td class="n">' + x.cum.toFixed(0) + '%</td><td class="n"><span class="cls ' + x.cls + '">' + x.cls + '</span></td></tr>';
+    }).join('') + '</tbody>';
+
+  var cols = ['High', 'Medium', 'Low'];
+  $('abcGrid').innerHTML = '<div class="abc-grid"><div></div>' + cols.map(function (c) { return '<div class="h">Critical: ' + c + '</div>'; }).join('') +
+    ['A', 'B', 'C'].map(function (k) {
+      return '<div class="rh"><span class="cls ' + k + '">' + k + '</span></div>' + cols.map(function (c) {
+        var g = r.rows.filter(function (x) { return x.cls === k && (x.sp.critical || 'Low') === c; });
+        return '<div class="cell' + (k === 'A' && c === 'High' && g.length ? ' hot' : '') + '" data-col="' + k + ' · Critical: ' + c + '"><b>' + g.length + '</b> spare' + (g.length === 1 ? '' : 's') + ' — ' + POLICY[k][c] +
+          (g.length ? '<span class="names">' + g.map(function (x) { return esc(x.sp.item); }).join(', ') + '</span>' : '') + '</div>';
+      }).join('');
+    }).join('') + '</div>';
+
+  var colour = { A: col.c1, B: col.c2, C: cssVar('--c3') };
+  var o = baseOpts(col);
+  o.indexAxis = 'y';
+  o.scales.x.ticks.callback = function (v) { return rs(v); };
+  o.scales.y.grid.display = false;
+  o.scales.y.ticks.autoSkip = false;
+  o.plugins.tooltip = { callbacks: { label: function (ctx) { var x = r.rows[ctx.dataIndex]; return 'Class ' + x.cls + ': ' + rs(x.yearly) + ' a year (' + x.share.toFixed(1) + '%, running total ' + x.cum.toFixed(0) + '%)'; } } };
+  drawChart('abcChart', {
+    type: 'bar',
+    data: { labels: r.rows.map(function (x) { return x.sp.item.length > 20 ? x.sp.item.slice(0, 19) + '…' : x.sp.item; }),
+            datasets: [{ data: r.rows.map(function (x) { return Math.round(x.yearly); }), backgroundColor: r.rows.map(function (x) { return colour[x.cls]; }), borderRadius: 4, borderSkipped: false, maxBarThickness: 22 }] },
+    options: o
+  });
 }
 
 /* ---------------- Indent early warning ---------------- */
@@ -673,7 +743,7 @@ function renderSuppliers() {
 
 /* ---------------- Wiring ---------------- */
 function renderAll() {
-  try { renderMachines(); renderStock(); renderSpare(); renderLinks(); renderIndent(); renderOrders(); renderSuppliers(); renderSummary(); }
+  try { renderMachines(); renderStock(); renderAbc(); renderSpare(); renderLinks(); renderIndent(); renderOrders(); renderSuppliers(); renderSummary(); }
   catch (e) { showError('Something went wrong while working out the figures. Please pass this message on:', e); }
 }
 
@@ -691,6 +761,7 @@ function start() {
   });
   document.addEventListener('change', function (e) {
     if (e.target.id === 'spareMachine') { S.spare.machine = e.target.value; save(); renderSpare(); }
+    if (e.target.id === 'abcA' || e.target.id === 'abcB') { abcCuts()[e.target.id === 'abcA' ? 'a' : 'b'] = num(e.target.value); save(); renderAbc(); renderStock(); }
     if (e.target.id === 'spFilter') { spFilter = e.target.value; renderStock(); }
     if (e.target.id === 'poFilter') { poFilter = e.target.value; renderOrders(); }
   });

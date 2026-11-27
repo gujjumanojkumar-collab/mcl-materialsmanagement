@@ -14,7 +14,7 @@
 <header class="top"><div class="wrap">
   <a class="brand" href="index.html"><i aria-hidden="true"></i>MM spares monitor</a>
   <nav class="menu" aria-label="Main menu">
-    <a href="#summary">Summary</a><a href="#machines">Machines</a><a href="#stock">Spares list</a><a href="#spare">Spare: worth it?</a><a href="#indent">Indent warning</a><a href="#supply">Late supplies</a><a href="#suppliers">Suppliers</a>
+    <a href="#summary">Summary</a><a href="#machines">Machines</a><a href="#stock">Spares list</a><a href="#abc">ABC</a><a href="#spare">Spare: worth it?</a><a href="#indent">Indent warning</a><a href="#supply">Late supplies</a><a href="#suppliers">Suppliers</a>
   </nav>
 </div></header>
 
@@ -91,6 +91,33 @@
       <div class="btns" style="margin-top:14px"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" id="spCancel">Cancel</button></div>
     </form>
     <div class="grid3" id="spList"></div>
+  </section>
+
+  <!-- 3b. ABC ANALYSIS -->
+  <section id="abc">
+    <h2>ABC analysis</h2>
+    <p class="intro">Spares ranked by <b>yearly spend</b> (price × use per month × 12). A few costly spares take most of the money (<b>A</b>); many others take little (<b>C</b>). Watch A items closely; keep C items simple. The grid below adds how critical each spare is, because a spare with little spend can still stop a machine.</p>
+    <div class="kpis" style="margin-top:0;margin-bottom:14px" id="abcKpis"></div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Yearly spend by spare</h3>
+        <div class="legend"><span><i style="background:var(--c1)"></i>A</span><span><i style="background:var(--c2)"></i>B</span><span><i style="background:var(--c3)"></i>C</span></div>
+        <div class="chart-box tall"><canvas id="abcChart" aria-label="Yearly spend by spare, coloured by class"></canvas></div>
+        <div class="fields" style="margin-top:12px">
+          <label class="f">A = spares making up the first … % of spend<input id="abcA" type="number" min="1" max="99" inputmode="numeric"></label>
+          <label class="f">A + B = first … % of spend (rest is C)<input id="abcB" type="number" min="2" max="100" inputmode="numeric"></label>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>The list</h3>
+        <table class="compare" id="abcTable"></table>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h3>ABC × how critical: what to do</h3>
+      <p class="muted" style="font-size:14px">Rows: class by spend. Columns: how critical the spare is (High = machine stops without it).</p>
+      <div id="abcGrid"></div>
+    </div>
   </section>
 
   <!-- 4. SPARE: WORTH IT? -->
@@ -249,6 +276,7 @@
         <li><b>Idle days</b> = delivery date (or today, if not delivered) minus the date the spare was needed, if machines were stopped waiting.</li>
         <li><b>Domino</b>: a machine down for D days stops the next machine for D minus its buffer days (work in hand). Lost money = idle days × working hours a day × earning per working hour, for every machine stopped.</li>
         <li><b>Spares list</b>: reorder level = (used per month ÷ 30) × (lead time + safety days), rounded up. Reorder when stock + on order ≤ reorder level. Suggested order = enough to reach reorder level + 3 months of use. Dead stock = nothing issued for 365 days (or no use). Overstock = above reorder level + 12 months of use; the extra is money locked in the store.</li>
+        <li><b>ABC analysis</b>: yearly spend = price × used per month × 12. Sort from biggest to smallest. A spare is A if the spares above it make up less than the A% (70% unless changed) of total spend, B if less than the A+B% (90%), otherwise C.</li>
         <li><b>Indent warning</b>: hours run now = hours read + days since reading × working hours a day. Wears out in (life − hours run now) ÷ working hours a day. Raise indent by = wear-out date − lead time − safety margin. If it would arrive after wear-out, the idle days are costed with the domino, as for late supplies.</li>
         <li><b>Supplier on time %</b> = scored orders delivered by the promised date ÷ scored orders. <b>Penalty (LD)</b> = order value × penalty % × weeks late (part weeks count as full weeks), up to the cap. The 0.5% a week and 10% cap are made-up examples: use your contract terms.</li>
         <li>"Value of one unit of work" is the part of the mine's earning you credit to that machine. All figures here are <b>made up</b> for the MDP exercise.</li>

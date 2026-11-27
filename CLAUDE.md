@@ -130,3 +130,9 @@
   to the "Is a big spare worth buying?" calculator. Critical reorders and
   locked money appear in "What to do next". Twelve made-up spares.
   Next: pick from the suggestions (ABC analysis, import from SAP, database).
+- ABC analysis (Claude): new "ABC" section and menu link. Yearly spend per
+  spare = price x use per month x 12, sorted; A = first 70% of spend, B up
+  to 90%, C the rest (both cut-offs can be changed on the page). Shows
+  counts and spend per class, a bar chart coloured by class, the ranked list
+  with running total, and an ABC x critical (High/Medium/Low) grid with what
+  to do for each box. Each spare card in the Spares list now shows its class.
