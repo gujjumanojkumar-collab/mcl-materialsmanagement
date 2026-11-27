@@ -25,13 +25,21 @@ var SAMPLE = {
     aName: 'Original make (OEM)', aPrice: 20000000, aLife: 15000, aFit: 72, aLead: 180,
     bName: 'Rebuilt / other make', bPrice: 13000000, bLife: 9000, bFit: 72, bLead: 90
   },
+  ld: { rate: 0.5, cap: 10 },   // penalty for late supply: % of order value per week, and the cap (made up)
   orders: [
     { id: 'PO-26-014', item: 'Undercarriage assembly (track set)', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor A', value: 20000000, urgency: 'High', status: 'Resolved', indent: '2026-03-02', po: '2026-06-20', promised: '2026-09-30', required: '2026-09-15', actual: '2026-10-28', stopped: 1 },
     { id: 'PO-26-009', item: 'Engine overhaul kit', machine: 'DP-11', location: 'Coal bench 2', supplier: 'Vendor E', value: 1500000, urgency: 'Medium', status: 'Resolved', indent: '2026-02-10', po: '2026-05-30', promised: '2026-07-15', required: '2026-07-01', actual: '2026-08-20', stopped: 1 },
     { id: 'PO-26-021', item: 'Hoist rope set', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor B', value: 1800000, urgency: 'Low', status: 'Resolved', indent: '2026-07-01', po: '2026-08-05', promised: '2026-09-20', required: '2026-10-01', actual: '2026-09-28', stopped: 0 },
     { id: 'PO-26-027', item: 'Drill bit and rod set', machine: 'DR-03', location: 'East quarry', supplier: 'Vendor C', value: 950000, urgency: 'High', status: 'In progress', indent: '2026-08-10', po: '2026-09-25', promised: '2026-10-25', required: '2026-11-05', actual: '', stopped: 1 },
     { id: 'PO-26-031', item: 'Tyres 27.00 R49 (set of 6)', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor D', value: 7200000, urgency: 'High', status: 'In progress', indent: '2026-07-15', po: '2026-09-01', promised: '2026-11-10', required: '2026-11-20', actual: '', stopped: 1 },
-    { id: 'PO-26-035', item: 'Swing motor', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 2600000, urgency: 'Medium', status: 'Open', indent: '2026-09-05', po: '2026-10-20', promised: '2026-12-15', required: '2026-12-20', actual: '', stopped: 1 }
+    { id: 'PO-26-035', item: 'Swing motor', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 2600000, urgency: 'Medium', status: 'Open', indent: '2026-09-05', po: '2026-10-20', promised: '2026-12-15', required: '2026-12-20', actual: '', stopped: 1 },
+    { id: 'PO-26-004', item: 'Bucket teeth set', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 450000, urgency: 'Low', status: 'Resolved', indent: '2026-01-20', po: '2026-03-05', promised: '2026-04-10', required: '2026-04-30', actual: '2026-04-06', stopped: 0 },
+    { id: 'PO-26-011', item: 'Hydraulic hose kit', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 320000, urgency: 'Low', status: 'Resolved', indent: '2026-04-02', po: '2026-05-10', promised: '2026-06-15', required: '2026-07-01', actual: '2026-06-12', stopped: 0 },
+    { id: 'PO-26-006', item: 'Brake discs', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor F', value: 850000, urgency: 'Medium', status: 'Resolved', indent: '2026-02-01', po: '2026-03-20', promised: '2026-05-05', required: '2026-05-20', actual: '2026-05-02', stopped: 0 },
+    { id: 'PO-26-018', item: 'Compressor filter set', machine: 'DR-03', location: 'East quarry', supplier: 'Vendor F', value: 260000, urgency: 'Low', status: 'Resolved', indent: '2026-05-12', po: '2026-06-15', promised: '2026-07-20', required: '2026-08-01', actual: '2026-07-18', stopped: 0 },
+    { id: 'PO-26-024', item: 'Dipper teeth', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor F', value: 600000, urgency: 'Medium', status: 'Resolved', indent: '2026-06-10', po: '2026-07-22', promised: '2026-08-30', required: '2026-09-10', actual: '2026-08-30', stopped: 0 },
+    { id: 'PO-26-012', item: 'Track pads (spare set)', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor A', value: 1800000, urgency: 'Medium', status: 'Resolved', indent: '2026-03-15', po: '2026-05-02', promised: '2026-07-01', required: '2026-07-20', actual: '2026-06-28', stopped: 0 },
+    { id: 'PO-26-016', item: 'Suspension cylinder', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor D', value: 1400000, urgency: 'Medium', status: 'Resolved', indent: '2026-04-10', po: '2026-05-25', promised: '2026-07-10', required: '2026-07-25', actual: '2026-07-08', stopped: 0 }
   ]
 };
 
@@ -210,6 +218,9 @@ function renderSummary() {
     var avg = slow.reduce(function (s, x) { return s + x.r.indentToPO; }, 0) / slow.length;
     if (avg > INDENT_TO_PO_NORM) acts.push(['warn', 'Process', 'Indent to purchase order takes <b>' + Math.round(avg) + ' days</b> on average against a norm of ' + INDENT_TO_PO_NORM + '. Start indents for long-lead spares earlier, or use rate contracts.']);
   }
+  calcSuppliers().filter(function (x) { return x.level === 'bad'; }).forEach(function (x) {
+    acts.push(['bad', 'Supplier', '<b>' + esc(x.name) + '</b> delivered ' + Math.round(x.onTimePct) + '% on time and cost ' + esc(rs(x.lost)) + ' in lost production. Keep a second supplier for critical spares and recover the penalty of ' + esc(rs(x.ld)) + '.']);
+  });
   if (!acts.length) acts.push(['ok', 'Good', 'All machines are profitable and no supplies are late.']);
   $('actions').innerHTML = acts.map(function (a) { return '<li><span class="pill ' + a[0] + '">' + a[1] + '</span><span>' + a[2] + '</span></li>'; }).join('');
 
@@ -396,9 +407,82 @@ function saveForm(ev) {
   save(); renderAll();
 }
 
+
+/* ---------------- Supplier scorecard ---------------- */
+function ldTerms() { if (!S.ld) S.ld = clone(SAMPLE.ld); return S.ld; }
+function calcSuppliers() {
+  var ld = ldTerms(), by = {};
+  S.orders.forEach(function (o) {
+    var name = (o.supplier || '').trim() || 'Supplier not entered';
+    var r = calcOrder(o), s = by[name] || (by[name] = { name: name, orders: 0, value: 0, scored: 0, onTime: 0, lateDays: 0,
+      idle: 0, lost: 0, ld: 0, openLate: 0, worst: null });
+    s.orders++; s.value += num(o.value);
+    var scored = r.received || r.late > 0;           // arrived, or already past the promised date
+    if (scored) {
+      s.scored++; s.lateDays += r.late;
+      if (r.late === 0) s.onTime++;
+      s.ld += num(o.value) * Math.min(num(ld.cap), num(ld.rate) * Math.ceil(r.late / 7)) / 100;
+    }
+    if (!r.received && r.late > 0) s.openLate++;
+    s.idle += r.idle; s.lost += r.lost;
+    if (r.lost > 0 && (!s.worst || r.lost > s.worst.lost)) s.worst = { item: o.item, lost: r.lost };
+  });
+  return Object.keys(by).map(function (k) {
+    var s = by[k];
+    s.onTimePct = s.scored ? s.onTime / s.scored * 100 : null;
+    s.avgLate = s.scored ? s.lateDays / s.scored : 0;
+    if (!s.scored) s.level = 'plain';
+    else if (s.onTimePct < 50 || s.lost > s.value) s.level = 'bad';
+    else if (s.onTimePct < 80 || s.lost > 0) s.level = 'warn';
+    else s.level = 'ok';
+    return s;
+  }).sort(function (a, b) { return b.lost - a.lost || (a.onTimePct == null ? 101 : a.onTimePct) - (b.onTimePct == null ? 101 : b.onTimePct); });
+}
+var GRADE = { ok: 'Good', warn: 'Watch', bad: 'Poor', plain: 'No record yet' };
+function renderSuppliers() {
+  var list = calcSuppliers(), ld = ldTerms();
+  $('ldRate').value = ld.rate; $('ldCap').value = ld.cap;
+  var totLost = list.reduce(function (t, s) { return t + s.lost; }, 0), totLd = list.reduce(function (t, s) { return t + s.ld; }, 0);
+  $('ldSay').textContent = totLost > 0
+    ? 'Penalties due on all late orders: ' + rs(totLd) + '. Production lost: ' + rs(totLost) + '. The penalty covers only ' + (totLd / totLost * 100).toFixed(1) + '% of the loss, so on-time supply matters far more than the penalty.'
+    : 'Penalties due on all late orders: ' + rs(totLd) + '.';
+
+  $('supplierCards').innerHTML = list.map(function (s) {
+    var advice;
+    if (s.level === 'bad') advice = 'Do not give long-lead or critical spares to this supplier alone. Keep a second approved supplier, recover the penalty, and place their orders earlier.';
+    else if (s.level === 'warn') advice = 'Follow up two weeks before each promised date. Ask for a supply plan for open orders.';
+    else if (s.level === 'ok') advice = 'Reliable so far. A good choice for critical spares and rate contracts.';
+    else advice = 'No order has arrived or fallen due yet.';
+    return '<div class="panel"><div class="mcard"><div class="head"><div><h3>' + esc(s.name) + '</h3><div class="sub">' + s.orders + ' order' + (s.orders > 1 ? 's' : '') + ' · ' + rs(s.value) + '</div></div>' +
+      '<span class="pill ' + s.level + '">' + GRADE[s.level] + '</span></div></div>' +
+      '<div class="results" style="margin-top:0">' +
+      res('On time', s.onTimePct == null ? '–' : Math.round(s.onTimePct) + '% <small class="muted">(' + s.onTime + ' of ' + s.scored + ')</small>', s.onTimePct == null ? '' : s.onTimePct >= 80 ? 'ok' : s.onTimePct >= 50 ? 'warn' : 'bad') +
+      res('Average days late', s.scored ? s.avgLate.toFixed(0) + ' days' : '–', s.avgLate > 0 ? 'warn' : '') +
+      res('Machine idle days caused', String(s.idle), s.idle > 0 ? 'bad' : '') +
+      res('Production lost (with domino)', rs(s.lost), s.lost > 0 ? 'bad' : '') +
+      res('Penalty (LD) due', rs(s.ld)) +
+      res('Late and still not received', String(s.openLate), s.openLate ? 'warn' : '') +
+      '</div>' + (s.worst ? '<p class="say">Worst: <b>' + esc(s.worst.item) + '</b>, ' + rs(s.worst.lost) + ' lost.</p>' : '') +
+      '<p class="say muted">' + advice + '</p></div>';
+  }).join('') || '<p class="muted">No purchase orders yet.</p>';
+
+  var col = chartColors(), o = baseOpts(col);
+  o.indexAxis = 'y';
+  o.scales.x.ticks.callback = function (v) { return rs(v); };
+  o.scales.y.grid.display = false;
+  o.plugins.tooltip = { callbacks: { label: function (ctx) { return 'Production lost: ' + rs(ctx.raw); } } };
+  drawChart('supplierChart', {
+    type: 'bar',
+    data: { labels: list.map(function (s) { return s.name; }),
+            datasets: [{ data: list.map(function (s) { return Math.round(s.lost); }), backgroundColor: col.neg, borderRadius: 4, borderSkipped: false, maxBarThickness: 28 }] },
+    options: o
+  });
+  return list;
+}
+
 /* ---------------- Wiring ---------------- */
 function renderAll() {
-  try { renderMachines(); renderSpare(); renderLinks(); renderOrders(); renderSummary(); }
+  try { renderMachines(); renderSpare(); renderLinks(); renderOrders(); renderSuppliers(); renderSummary(); }
   catch (e) { showError('Something went wrong while working out the figures. Please pass this message on:', e); }
 }
 
@@ -409,9 +493,10 @@ function start() {
 
   document.addEventListener('input', function (e) {
     var t = e.target, d = t.dataset;
-    if (d.m != null) { S.machines[+d.m][d.k] = num(t.value); save(); renderMachines(); renderSpare(); renderOrders(); renderSummary(); }
+    if (d.m != null) { S.machines[+d.m][d.k] = num(t.value); save(); renderMachines(); renderSpare(); renderOrders(); renderSuppliers(); renderSummary(); }
     else if (d.s != null) { S.spare[d.s] = t.type === 'number' ? num(t.value) : t.value; save(); renderSpare(); }
-    else if (d.l != null) { S.links[+d.l][d.k] = num(t.value); save(); renderOrders(); renderSummary(); }
+    else if (d.l != null) { S.links[+d.l][d.k] = num(t.value); save(); renderOrders(); renderSuppliers(); renderSummary(); }
+    else if (t.id === 'ldRate' || t.id === 'ldCap') { ldTerms()[t.id === 'ldRate' ? 'rate' : 'cap'] = num(t.value); save(); renderSuppliers(); }
   });
   document.addEventListener('change', function (e) {
     if (e.target.id === 'spareMachine') { S.spare.machine = e.target.value; save(); renderSpare(); }

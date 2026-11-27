@@ -96,3 +96,13 @@
   top folder of mcl-materialsmanagement, plus an empty config.js. Next:
   connect this repository to Vercel; replace made-up figures; choose the
   next addition (reorder levels, indent early warning, supplier scorecard).
+- Supplier scorecard (Claude): new "Suppliers" section and menu link. Per
+  supplier: orders and value, on-time % (only orders that arrived or are past
+  their promised date), average days late, machine idle days caused,
+  production lost with domino, penalty (LD) due, late and not yet received,
+  grade (Good / Watch / Poor) and advice. Chart of money lost per supplier.
+  Penalty terms (0.5% a week, 10% cap; made up) can be changed on the page.
+  Poor suppliers also appear in "What to do next". Seven made-up on-time
+  orders added to the sample so the grades vary. Known problem: browsers that
+  opened the page before keep the old sample until "Reset to sample figures".
+  Next: reorder levels or indent early warning.

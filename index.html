@@ -14,7 +14,7 @@
 <header class="top"><div class="wrap">
   <a class="brand" href="index.html"><i aria-hidden="true"></i>MM spares monitor</a>
   <nav class="menu" aria-label="Main menu">
-    <a href="#summary">Summary</a><a href="#machines">Machines</a><a href="#spare">Spare: worth it?</a><a href="#supply">Late supplies</a>
+    <a href="#summary">Summary</a><a href="#machines">Machines</a><a href="#spare">Spare: worth it?</a><a href="#supply">Late supplies</a><a href="#suppliers">Suppliers</a>
   </nav>
 </div></header>
 
@@ -154,6 +154,29 @@
     <div class="stack" id="poList"></div>
   </section>
 
+  <!-- 5. SUPPLIER SCORECARD -->
+  <section id="suppliers">
+    <h2>Supplier scorecard</h2>
+    <p class="intro">How each supplier performs, from the purchase orders above. Only orders that have arrived, or are already past their promised date, are scored. <b>Penalty (LD)</b> is the liquidated damages the contract lets us recover for late supply.</p>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Money lost through each supplier</h3>
+        <p class="muted" style="font-size:14px">Lost production from their late supplies, including machines stopped by the domino.</p>
+        <div class="chart-box"><canvas id="supplierChart" aria-label="Money lost through each supplier"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Penalty terms (from the contract)</h3>
+        <div class="fields">
+          <label class="f">Penalty % of order value per week late<input type="number" min="0" step="0.1" inputmode="decimal" id="ldRate"></label>
+          <label class="f">Penalty cap, % of order value<input type="number" min="0" step="1" inputmode="decimal" id="ldCap"></label>
+        </div>
+        <p class="say muted" id="ldSay"></p>
+        <p class="muted" style="font-size:14px;margin-top:10px"><b>Grades:</b> <span class="pill ok">Good</span> 80% or more on time and no production lost. <span class="pill warn">Watch</span> some lateness or loss. <span class="pill bad">Poor</span> under 50% on time, or lost more than the value of their orders.</p>
+      </div>
+    </div>
+    <div class="grid3" id="supplierCards" style="margin-top:14px"></div>
+  </section>
+
   <section id="notes">
     <h2>How it is worked out</h2>
     <div class="panel notes">
@@ -164,6 +187,7 @@
         <li><b>Spare pays back</b> when working hours × earning per working hour = spare price. <b>Cost per working hour</b> of a spare = (price + earnings lost while fitting) ÷ life in hours.</li>
         <li><b>Idle days</b> = delivery date (or today, if not delivered) minus the date the spare was needed, if machines were stopped waiting.</li>
         <li><b>Domino</b>: a machine down for D days stops the next machine for D minus its buffer days (work in hand). Lost money = idle days × working hours a day × earning per working hour, for every machine stopped.</li>
+        <li><b>Supplier on time %</b> = scored orders delivered by the promised date ÷ scored orders. <b>Penalty (LD)</b> = order value × penalty % × weeks late (part weeks count as full weeks), up to the cap. The 0.5% a week and 10% cap are made-up examples: use your contract terms.</li>
         <li>"Value of one unit of work" is the part of the mine's earning you credit to that machine. All figures here are <b>made up</b> for the MDP exercise.</li>
       </ul>
       <div class="btns no-print"><button class="btn" type="button" onclick="window.print()">Print or save as PDF</button><button class="btn danger" type="button" id="reset">Reset to sample figures</button></div>
