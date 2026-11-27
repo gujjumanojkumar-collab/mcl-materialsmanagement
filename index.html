@@ -14,7 +14,7 @@
 <header class="top"><div class="wrap">
   <a class="brand" href="index.html"><i aria-hidden="true"></i>MM spares monitor</a>
   <nav class="menu" aria-label="Main menu">
-    <a href="#summary">Summary</a><a href="#machines">Machines</a><a href="#spare">Spare: worth it?</a><a href="#indent">Indent warning</a><a href="#supply">Late supplies</a><a href="#suppliers">Suppliers</a>
+    <a href="#summary">Summary</a><a href="#machines">Machines</a><a href="#stock">Spares list</a><a href="#spare">Spare: worth it?</a><a href="#indent">Indent warning</a><a href="#supply">Late supplies</a><a href="#suppliers">Suppliers</a>
   </nav>
 </div></header>
 
@@ -57,7 +57,43 @@
     <div class="grid2" id="machineCards"></div>
   </section>
 
-  <!-- 3. SPARE: WORTH IT? -->
+  <!-- 3. SPARES LIST (STOCK) -->
+  <section id="stock">
+    <h2>Spares list</h2>
+    <p class="intro">Every spare in the stores, one by one. <b>Reorder level</b> = daily use × (lead time + safety days): when stock plus what is already on order falls to this level, raise the indent. <b>Dead stock</b> = not issued for over a year. <b>Overstock</b> = more than reorder level plus 12 months of use.</p>
+    <div class="kpis" style="margin-top:0;margin-bottom:14px" id="stockKpis"></div>
+    <div class="btns no-print" style="margin-bottom:12px">
+      <button class="btn primary" id="addSp" type="button">+ Add a spare</button>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px">Show
+        <select id="spFilter" style="width:auto">
+          <option value="all">All spares</option><option value="reorder">Out of stock or reorder now</option><option value="locked">Dead stock or overstock</option>
+        </select>
+      </label>
+      <label class="f" style="flex:1 1 200px"><span class="sr-only">Search</span><input id="spSearch" type="search" placeholder="Search spare, code or machine"></label>
+    </div>
+    <form class="panel no-print" id="spForm" hidden style="margin-bottom:14px">
+      <h3 id="spFormTitle">Add a spare</h3>
+      <div class="fields three">
+        <label class="f wide">Spare<input name="item" type="text" required></label>
+        <label class="f">Code<input name="code" type="text"></label>
+        <label class="f">For machine<select name="machine" id="spMachine"></select></label>
+        <label class="f">Store (location)<input name="store" type="text" required></label>
+        <label class="f">Price each (Rs)<input name="price" type="number" min="0" inputmode="numeric" required></label>
+        <label class="f">In stock (qty)<input name="stock" type="number" min="0" step="any" inputmode="decimal" required></label>
+        <label class="f">Already on order (qty)<input name="onOrder" type="number" min="0" step="any" inputmode="decimal" value="0"></label>
+        <label class="f">Used per month (qty)<input name="use" type="number" min="0" step="any" inputmode="decimal" required></label>
+        <label class="f">Lead time (days)<input name="lead" type="number" min="0" inputmode="numeric" required></label>
+        <label class="f">Safety (days)<input name="safety" type="number" min="0" inputmode="numeric" value="15"></label>
+        <label class="f">How critical<select name="critical"><option>Low</option><option>Medium</option><option>High</option></select></label>
+        <label class="f">Last issued on<input name="lastIssued" type="date"></label>
+        <label class="f">Life (working hours, if known)<input name="life" type="number" min="0" inputmode="numeric"></label>
+      </div>
+      <div class="btns" style="margin-top:14px"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" id="spCancel">Cancel</button></div>
+    </form>
+    <div class="grid3" id="spList"></div>
+  </section>
+
+  <!-- 4. SPARE: WORTH IT? -->
   <section id="spare">
     <h2>Is a big spare worth buying?</h2>
     <p class="intro">Example: an undercarriage assembly for a shovel at Rs 2 crore. Does the production it makes possible over its life pay for it? And is a cheaper option really cheaper per working hour?</p>
@@ -104,7 +140,7 @@
     </div>
   </section>
 
-  <!-- 4. INDENT EARLY WARNING -->
+  <!-- 5. INDENT EARLY WARNING -->
   <section id="indent">
     <h2>Indent early warning</h2>
     <p class="intro">Spares fitted on machines wear out. Each card works out when the part will wear out, from the hours it has run and how many hours a day its machine works. It then counts back the lead time and a safety margin to give the date to raise the indent. <span id="leadHint"></span></p>
@@ -129,7 +165,7 @@
     <div class="grid2" id="wList"></div>
   </section>
 
-  <!-- 5. LATE SUPPLIES AND THE DOMINO EFFECT -->
+  <!-- 6. LATE SUPPLIES AND THE DOMINO EFFECT -->
   <section id="supply">
     <h2>Late supplies and the domino effect</h2>
     <p class="intro">When a spare arrives after the date it was needed, the machine stands idle. Machines that depend on it stop next: no drilling means no blasted rock for the shovel after a few days, and no shovel means the dumpers have nothing to carry.</p>
@@ -179,7 +215,7 @@
     <div class="stack" id="poList"></div>
   </section>
 
-  <!-- 6. SUPPLIER SCORECARD -->
+  <!-- 7. SUPPLIER SCORECARD -->
   <section id="suppliers">
     <h2>Supplier scorecard</h2>
     <p class="intro">How each supplier performs, from the purchase orders above. Only orders that have arrived, or are already past their promised date, are scored. <b>Penalty (LD)</b> is the liquidated damages the contract lets us recover for late supply.</p>
@@ -212,6 +248,7 @@
         <li><b>Spare pays back</b> when working hours × earning per working hour = spare price. <b>Cost per working hour</b> of a spare = (price + earnings lost while fitting) ÷ life in hours.</li>
         <li><b>Idle days</b> = delivery date (or today, if not delivered) minus the date the spare was needed, if machines were stopped waiting.</li>
         <li><b>Domino</b>: a machine down for D days stops the next machine for D minus its buffer days (work in hand). Lost money = idle days × working hours a day × earning per working hour, for every machine stopped.</li>
+        <li><b>Spares list</b>: reorder level = (used per month ÷ 30) × (lead time + safety days), rounded up. Reorder when stock + on order ≤ reorder level. Suggested order = enough to reach reorder level + 3 months of use. Dead stock = nothing issued for 365 days (or no use). Overstock = above reorder level + 12 months of use; the extra is money locked in the store.</li>
         <li><b>Indent warning</b>: hours run now = hours read + days since reading × working hours a day. Wears out in (life − hours run now) ÷ working hours a day. Raise indent by = wear-out date − lead time − safety margin. If it would arrive after wear-out, the idle days are costed with the domino, as for late supplies.</li>
         <li><b>Supplier on time %</b> = scored orders delivered by the promised date ÷ scored orders. <b>Penalty (LD)</b> = order value × penalty % × weeks late (part weeks count as full weeks), up to the cap. The 0.5% a week and 10% cap are made-up examples: use your contract terms.</li>
         <li>"Value of one unit of work" is the part of the mine's earning you credit to that machine. All figures here are <b>made up</b> for the MDP exercise.</li>

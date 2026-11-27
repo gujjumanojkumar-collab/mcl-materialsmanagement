@@ -26,6 +26,20 @@ var SAMPLE = {
     bName: 'Rebuilt / other make', bPrice: 13000000, bLife: 9000, bFit: 72, bLead: 90
   },
   ld: { rate: 0.5, cap: 10 },
+  spares: [   // individual spares in the stores (made up)
+    { code: 'MM-0101', item: 'Track shoe', machine: 'SH-01', store: 'Central store', price: 85000, stock: 6, onOrder: 0, use: 2, lead: 120, safety: 15, critical: 'High', lastIssued: '2026-11-10', life: 12000 },
+    { code: 'MM-0102', item: 'Dipper tooth', machine: 'SH-01', store: 'Area store East', price: 42000, stock: 40, onOrder: 0, use: 8, lead: 60, safety: 15, critical: 'Medium', lastIssued: '2026-11-20', life: 0 },
+    { code: 'MM-0103', item: 'Hoist rope (set)', machine: 'SH-01', store: 'Central store', price: 1800000, stock: 0, onOrder: 0, use: 0.33, lead: 130, safety: 15, critical: 'High', lastIssued: '2026-09-28', life: 3000 },
+    { code: 'MM-0104', item: 'Undercarriage idler', machine: 'SH-01', store: 'Central store', price: 650000, stock: 1, onOrder: 0, use: 0.1, lead: 150, safety: 30, critical: 'Medium', lastIssued: '2026-04-02', life: 15000 },
+    { code: 'MM-0201', item: 'Bucket tooth', machine: 'HE-02', store: 'Area store East', price: 18000, stock: 60, onOrder: 0, use: 10, lead: 45, safety: 15, critical: 'Medium', lastIssued: '2026-11-18', life: 0 },
+    { code: 'MM-0202', item: 'Hydraulic hose', machine: 'HE-02', store: 'Area store East', price: 12000, stock: 120, onOrder: 0, use: 6, lead: 30, safety: 15, critical: 'Low', lastIssued: '2026-11-05', life: 0 },
+    { code: 'MM-0301', item: 'Tyre 27.00 R49', machine: 'DP-07', store: 'Central store', price: 1200000, stock: 2, onOrder: 6, use: 1, lead: 110, safety: 15, critical: 'High', lastIssued: '2026-10-30', life: 5000 },
+    { code: 'MM-0302', item: 'Brake disc', machine: 'DP-07', store: 'Central store', price: 140000, stock: 12, onOrder: 0, use: 1, lead: 75, safety: 15, critical: 'Medium', lastIssued: '2026-10-12', life: 0 },
+    { code: 'MM-0401', item: 'Drill bit 250 mm', machine: 'DR-03', store: 'Area store East', price: 95000, stock: 1, onOrder: 0, use: 4, lead: 60, safety: 15, critical: 'High', lastIssued: '2026-11-22', life: 400 },
+    { code: 'MM-0402', item: 'Rotary head gearbox', machine: 'DR-03', store: 'Central store', price: 2400000, stock: 0, onOrder: 0, use: 0.05, lead: 120, safety: 15, critical: 'High', lastIssued: '2025-02-14', life: 6000 },
+    { code: 'MM-0501', item: 'Engine assembly (old model)', machine: 'DP-11', store: 'Central store', price: 1500000, stock: 2, onOrder: 0, use: 0, lead: 100, safety: 15, critical: 'Low', lastIssued: '2024-08-15', life: 12000 },
+    { code: 'MM-0502', item: 'Gear pump (model discontinued)', machine: 'DP-11', store: 'Central store', price: 220000, stock: 5, onOrder: 0, use: 0, lead: 90, safety: 15, critical: 'Low', lastIssued: '2023-12-01', life: 0 }
+  ],
   fitted: [   // spares now fitted on machines, for the indent early warning (made up)
     { id: 'W1', item: 'Hoist rope set', machine: 'SH-01', life: 3000, run: 800, readOn: '2026-11-25', lead: 130, safety: 15, price: 1800000, raised: 'no' },
     { id: 'W2', item: 'Rotary head gearbox', machine: 'DR-03', life: 6000, run: 5300, readOn: '2026-11-25', lead: 120, safety: 15, price: 2400000, raised: 'no' },
@@ -226,6 +240,11 @@ function renderSummary() {
     var avg = slow.reduce(function (s, x) { return s + x.r.indentToPO; }, 0) / slow.length;
     if (avg > INDENT_TO_PO_NORM) acts.push(['warn', 'Process', 'Indent to purchase order takes <b>' + Math.round(avg) + ' days</b> on average against a norm of ' + INDENT_TO_PO_NORM + '. Start indents for long-lead spares earlier, or use rate contracts.']);
   }
+  var stk = sparesList().map(function (sp) { return { sp: sp, r: calcStock(sp) }; });
+  var crit = stk.filter(function (x) { return x.r.reorder && x.sp.critical === 'High'; });
+  if (crit.length) acts.push(['bad', 'Stock', 'Reorder now — critical spares at or below reorder level: <b>' + crit.map(function (x) { return esc(x.sp.item) + ' (' + esc(x.sp.machine) + ')'; }).join(', ') + '</b>.']);
+  var lk = stk.reduce(function (t, x) { return t + x.r.locked; }, 0);
+  if (lk > 0) acts.push(['warn', 'Stock', '<b>' + esc(rs(lk)) + '</b> is locked in dead stock or extra stock. Offer it to other areas or dispose of it, and stop ordering overstocked items.']);
   fittedList().forEach(function (w) {
     var r = calcWear(w);
     if (r.level === 'bad') acts.push(['bad', 'Indent', 'Raise the indent now for <b>' + esc(w.item) + '</b> (' + esc(w.machine) + ').' + (r.gap > 0 ? ' Even today it would arrive ' + r.gap + ' days after the old part wears out — about ' + esc(rs(r.lost)) + ' at risk.' : '')]);
@@ -292,6 +311,7 @@ function buildSpare() {
   $('spareMachine').innerHTML = opts;
   $('poMachine').innerHTML = opts;
   $('wMachine').innerHTML = opts;
+  $('spMachine').innerHTML = opts;
   document.querySelectorAll('[data-s]').forEach(function (el) { el.value = S.spare[el.dataset.s]; });
 }
 function renderSpare() {
@@ -305,7 +325,8 @@ function renderSpare() {
     why = 'It needs ' + int(r.paybackHrs) + ' working hours to pay back, but lasts only ' + int(A.life) + '.';
   } else {
     lvl = c.level === 'ok' ? 'ok' : 'warn';
-    head = 'Yes — it pays for itself in about ' + Math.ceil(r.paybackDays) + ' days of work';
+    var pd = Math.max(1, Math.ceil(r.paybackDays));
+    head = 'Yes — it pays for itself in about ' + pd + (pd === 1 ? ' day' : ' days') + ' of work';
     why = 'Over its life of about ' + A.years.toFixed(1) + ' years it lets ' + r.m.id + ' move ' + qty(r.lifeOutput) + ' ' + r.m.unit +
       ', worth ' + rs(r.lifeValue) + '. The spare is ' + r.share.toFixed(1) + '% of that.' +
       (c.level === 'warn' ? ' But the machine itself does not cover its fixed cost — raise its utilisation.' : '');
@@ -421,6 +442,92 @@ function saveForm(ev) {
   save(); renderAll();
 }
 
+
+/* ---------------- Spares list (stock) ---------------- */
+function sparesList() { if (!S.spares) S.spares = clone(SAMPLE.spares); return S.spares; }
+function calcStock(sp) {
+  var r = {}, daily = num(sp.use) / 30, have = num(sp.stock) + num(sp.onOrder);
+  r.rol = Math.ceil(daily * (num(sp.lead) + num(sp.safety)) - 1e-9);
+  r.cover = num(sp.use) > 0 ? num(sp.stock) / num(sp.use) : Infinity;        // months
+  r.value = num(sp.stock) * num(sp.price);
+  var last = day(sp.lastIssued);
+  r.idleDays = last ? diff(last, today()) : Infinity;
+  r.maxNeed = r.rol + 12 * num(sp.use);
+  r.dead = num(sp.stock) > 0 && (num(sp.use) === 0 || r.idleDays > 365);
+  r.excess = !r.dead && num(sp.stock) > r.maxNeed ? (num(sp.stock) - r.maxNeed) : 0;
+  r.locked = r.dead ? r.value : r.excess * num(sp.price);
+  r.orderQty = Math.max(0, Math.ceil(r.rol + 3 * num(sp.use) - have));
+  var crit = sp.critical === 'High';
+  if (r.dead) { r.level = 'warn'; r.label = 'Dead stock'; }
+  else if (num(sp.stock) <= 0 && num(sp.onOrder) <= 0 && num(sp.use) > 0) { r.level = 'bad'; r.label = 'Out of stock'; }
+  else if (num(sp.use) > 0 && have <= r.rol) { r.level = crit ? 'bad' : 'warn'; r.label = 'Reorder now'; }
+  else if (r.excess > 0) { r.level = 'warn'; r.label = 'Overstock'; }
+  else if (num(sp.onOrder) > 0 && num(sp.stock) <= r.rol) { r.level = 'plain'; r.label = 'On order'; }
+  else { r.level = 'ok'; r.label = 'OK'; }
+  r.reorder = r.label === 'Out of stock' || r.label === 'Reorder now';
+  return r;
+}
+var spFilter = 'all', spSearch = '', spEditing = -1;
+function renderStock() {
+  var all = sparesList().map(function (sp, i) { return { sp: sp, r: calcStock(sp), i: i }; });
+  var value = all.reduce(function (t, x) { return t + x.r.value; }, 0);
+  var locked = all.reduce(function (t, x) { return t + x.r.locked; }, 0);
+  var re = all.filter(function (x) { return x.r.reorder; });
+  var reCrit = re.filter(function (x) { return x.sp.critical === 'High'; });
+  $('stockKpis').innerHTML =
+    '<div class="kpi"><div class="l">Spares in the list</div><div class="v">' + all.length + '</div></div>' +
+    '<div class="kpi"><div class="l">Stock value</div><div class="v">' + rs(value) + '</div></div>' +
+    '<div class="kpi"><div class="l">To reorder now (critical)</div><div class="v ' + (re.length ? 'bad' : 'ok') + '">' + re.length + ' (' + reCrit.length + ')</div></div>' +
+    '<div class="kpi"><div class="l">Money locked in dead or extra stock</div><div class="v ' + (locked > 0 ? 'warn' : 'ok') + '">' + rs(locked) + '</div></div>';
+  var order = { bad: 0, warn: 1, plain: 2, ok: 3 }, q = spSearch.toLowerCase();
+  var list = all.filter(function (x) {
+    if (spFilter === 'reorder' && !x.r.reorder) return false;
+    if (spFilter === 'locked' && !(x.r.locked > 0)) return false;
+    return !q || (x.sp.item + ' ' + x.sp.code + ' ' + x.sp.machine + ' ' + x.sp.store).toLowerCase().indexOf(q) >= 0;
+  }).sort(function (a, b) { return order[a.r.level] - order[b.r.level] || b.r.value - a.r.value; });
+  $('spList').innerHTML = list.map(function (x) {
+    var sp = x.sp, r = x.r, say;
+    if (r.label === 'Dead stock') say = 'Not issued for ' + (isFinite(r.idleDays) ? Math.round(r.idleDays / 30) + ' months' : 'a long time') + '. ' + rs(r.value) + ' locked. Offer to other areas, return to supplier, or dispose of it.';
+    else if (r.reorder) say = 'Raise the indent now for about <b>' + r.orderQty + '</b> (' + rs(r.orderQty * num(sp.price)) + ').' + (sp.critical === 'High' ? ' Critical: ' + esc(sp.machine) + ' stops without it.' : '');
+    else if (r.label === 'Overstock') say = int(r.excess) + ' more than needed: ' + rs(r.locked) + ' locked. Stop ordering until it is used down.';
+    else if (r.label === 'On order') say = num(sp.onOrder) + ' on order. Watch the delivery date under Late supplies.';
+    else say = 'Enough for about ' + (isFinite(r.cover) ? r.cover.toFixed(1) + ' months' : 'a long time') + '.';
+    return '<div class="panel"><div class="mcard"><div class="head"><div><h3>' + esc(sp.item) + '</h3><div class="sub">' + esc(sp.code) + ' · ' + esc(sp.machine) + ' · ' + esc(sp.store) + '</div></div><span class="pill ' + r.level + '">' + r.label + '</span></div></div>' +
+      '<div class="tags" style="margin-top:0"><span class="pill ' + ({ High: 'bad', Medium: 'warn', Low: 'plain' }[sp.critical] || 'plain') + '">Critical: ' + esc(sp.critical) + '</span><span class="pill plain">' + rs(num(sp.price)) + ' each</span></div>' +
+      '<div class="results" style="margin-top:4px">' +
+      res('In stock' + (num(sp.onOrder) ? ' (+ ' + num(sp.onOrder) + ' on order)' : ''), String(num(sp.stock)), r.reorder ? 'bad' : '') +
+      res('Reorder level', String(r.rol)) +
+      res('Used per month', String(num(sp.use))) +
+      res('Stock value', rs(r.value)) +
+      '</div><p class="say">' + say + '</p>' +
+      '<div class="btns no-print" style="margin-top:10px"><button class="btn small" type="button" data-spworth="' + x.i + '">Worth it?</button><button class="btn small" type="button" data-spedit="' + x.i + '">Edit</button><button class="btn small danger" type="button" data-spdel="' + x.i + '">Remove</button></div></div>';
+  }).join('') || '<p class="muted">No spares match.</p>';
+  return all;
+}
+var SP_KEYS = ['item', 'code', 'machine', 'store', 'price', 'stock', 'onOrder', 'use', 'lead', 'safety', 'critical', 'lastIssued', 'life'];
+function openSpForm(i) {
+  spEditing = i;
+  var f = $('spForm'), sp = i >= 0 ? sparesList()[i] : { machine: S.machines[0].id, onOrder: 0, safety: 15, critical: 'Medium' };
+  SP_KEYS.forEach(function (k) { f.elements[k].value = sp[k] == null ? '' : sp[k]; });
+  $('spFormTitle').textContent = i >= 0 ? 'Edit ' + sp.item : 'Add a spare';
+  f.hidden = false; f.elements.item.focus();
+}
+function saveSpForm(ev) {
+  ev.preventDefault();
+  var f = $('spForm'), sp = spEditing >= 0 ? sparesList()[spEditing] : {};
+  SP_KEYS.forEach(function (k) { sp[k] = f.elements[k].value.trim(); });
+  ['price', 'stock', 'onOrder', 'use', 'lead', 'safety', 'life'].forEach(function (k) { sp[k] = num(sp[k]); });
+  if (spEditing < 0) sparesList().push(sp);
+  f.hidden = true; spEditing = -1;
+  save(); renderAll();
+}
+function sendToWorth(i) {
+  var sp = sparesList()[i];
+  S.spare.machine = sp.machine; S.spare.item = sp.item; S.spare.aPrice = num(sp.price);
+  if (num(sp.life) > 0) S.spare.aLife = num(sp.life);
+  save(); buildSpare(); renderSpare();
+  $('spare').scrollIntoView({ block: 'start' });
+}
 
 /* ---------------- Indent early warning ---------------- */
 function fittedList() { if (!S.fitted) S.fitted = clone(SAMPLE.fitted); return S.fitted; }
@@ -566,7 +673,7 @@ function renderSuppliers() {
 
 /* ---------------- Wiring ---------------- */
 function renderAll() {
-  try { renderMachines(); renderSpare(); renderLinks(); renderIndent(); renderOrders(); renderSuppliers(); renderSummary(); }
+  try { renderMachines(); renderStock(); renderSpare(); renderLinks(); renderIndent(); renderOrders(); renderSuppliers(); renderSummary(); }
   catch (e) { showError('Something went wrong while working out the figures. Please pass this message on:', e); }
 }
 
@@ -584,6 +691,7 @@ function start() {
   });
   document.addEventListener('change', function (e) {
     if (e.target.id === 'spareMachine') { S.spare.machine = e.target.value; save(); renderSpare(); }
+    if (e.target.id === 'spFilter') { spFilter = e.target.value; renderStock(); }
     if (e.target.id === 'poFilter') { poFilter = e.target.value; renderOrders(); }
   });
   $('poList').addEventListener('click', function (e) {
@@ -594,6 +702,16 @@ function start() {
   $('addPO').addEventListener('click', function () { openForm(-1); });
   $('poCancel').addEventListener('click', function () { $('poForm').hidden = true; editing = -1; });
   $('poForm').addEventListener('submit', saveForm);
+  $('addSp').addEventListener('click', function () { openSpForm(-1); });
+  $('spCancel').addEventListener('click', function () { $('spForm').hidden = true; spEditing = -1; });
+  $('spForm').addEventListener('submit', saveSpForm);
+  $('spSearch').addEventListener('input', function (e) { spSearch = e.target.value; renderStock(); });
+  $('spList').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.spworth != null) sendToWorth(+b.dataset.spworth);
+    if (b.dataset.spedit != null) { openSpForm(+b.dataset.spedit); $('spForm').scrollIntoView({ block: 'start' }); }
+    if (b.dataset.spdel != null && confirm('Remove "' + sparesList()[+b.dataset.spdel].item + '"?')) { sparesList().splice(+b.dataset.spdel, 1); save(); renderAll(); }
+  });
   $('addW').addEventListener('click', function () { openWForm(-1); });
   $('wCancel').addEventListener('click', function () { $('wForm').hidden = true; wEditing = -1; });
   $('wForm').addEventListener('submit', saveWForm);

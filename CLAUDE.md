@@ -120,3 +120,13 @@
   publishes from the main branch. Checked: latest version live, all six
   sections load, no errors, phone layout fine. Next: reorder levels for
   stock items, or real figures in place of the made-up ones.
+- Spares list (Claude): new "Spares list" section and menu link, for each
+  individual spare in the stores: code, machine, store (location), price,
+  stock, on order, use per month, lead time, safety days, how critical
+  (Low / Medium / High), last issued, life in hours. Works out reorder
+  level, status (Out of stock / Reorder now / On order / Overstock / Dead
+  stock / OK), suggested order quantity, stock value and money locked.
+  Filter and search; add, edit, remove; a "Worth it?" button sends the spare
+  to the "Is a big spare worth buying?" calculator. Critical reorders and
+  locked money appear in "What to do next". Twelve made-up spares.
+  Next: pick from the suggestions (ABC analysis, import from SAP, database).
