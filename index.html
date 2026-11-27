@@ -14,7 +14,7 @@
 <header class="top"><div class="wrap">
   <a class="brand" href="index.html"><i aria-hidden="true"></i>MM spares monitor</a>
   <nav class="menu" aria-label="Main menu">
-    <a href="#summary">Summary</a><a href="#machines">Machines</a><a href="#spare">Spare: worth it?</a><a href="#supply">Late supplies</a><a href="#suppliers">Suppliers</a>
+    <a href="#summary">Summary</a><a href="#machines">Machines</a><a href="#spare">Spare: worth it?</a><a href="#indent">Indent warning</a><a href="#supply">Late supplies</a><a href="#suppliers">Suppliers</a>
   </nav>
 </div></header>
 
@@ -104,7 +104,32 @@
     </div>
   </section>
 
-  <!-- 4. LATE SUPPLIES AND THE DOMINO EFFECT -->
+  <!-- 4. INDENT EARLY WARNING -->
+  <section id="indent">
+    <h2>Indent early warning</h2>
+    <p class="intro">Spares fitted on machines wear out. Each card works out when the part will wear out, from the hours it has run and how many hours a day its machine works. It then counts back the lead time and a safety margin to give the date to raise the indent. <span id="leadHint"></span></p>
+    <div class="btns no-print" style="margin-bottom:12px">
+      <button class="btn primary" id="addW" type="button">+ Add a fitted spare</button>
+    </div>
+    <form class="panel no-print" id="wForm" hidden style="margin-bottom:14px">
+      <h3 id="wFormTitle">Add a fitted spare</h3>
+      <div class="fields three">
+        <label class="f wide">Spare<input name="item" type="text" required></label>
+        <label class="f">On machine<select name="machine" id="wMachine"></select></label>
+        <label class="f">Life (working hours)<input name="life" type="number" min="1" inputmode="numeric" required></label>
+        <label class="f">Hours run so far<input name="run" type="number" min="0" inputmode="numeric" required></label>
+        <label class="f">Hours read on (date)<input name="readOn" type="date" required></label>
+        <label class="f">Lead time, indent to delivery (days)<input name="lead" type="number" min="0" inputmode="numeric" required></label>
+        <label class="f">Safety margin (days)<input name="safety" type="number" min="0" inputmode="numeric" value="15"></label>
+        <label class="f">Price (Rs)<input name="price" type="number" min="0" inputmode="numeric"></label>
+        <label class="f">Indent already raised?<select name="raised"><option value="no">No</option><option value="yes">Yes</option></select></label>
+      </div>
+      <div class="btns" style="margin-top:14px"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" id="wCancel">Cancel</button></div>
+    </form>
+    <div class="grid2" id="wList"></div>
+  </section>
+
+  <!-- 5. LATE SUPPLIES AND THE DOMINO EFFECT -->
   <section id="supply">
     <h2>Late supplies and the domino effect</h2>
     <p class="intro">When a spare arrives after the date it was needed, the machine stands idle. Machines that depend on it stop next: no drilling means no blasted rock for the shovel after a few days, and no shovel means the dumpers have nothing to carry.</p>
@@ -154,7 +179,7 @@
     <div class="stack" id="poList"></div>
   </section>
 
-  <!-- 5. SUPPLIER SCORECARD -->
+  <!-- 6. SUPPLIER SCORECARD -->
   <section id="suppliers">
     <h2>Supplier scorecard</h2>
     <p class="intro">How each supplier performs, from the purchase orders above. Only orders that have arrived, or are already past their promised date, are scored. <b>Penalty (LD)</b> is the liquidated damages the contract lets us recover for late supply.</p>
@@ -187,6 +212,7 @@
         <li><b>Spare pays back</b> when working hours × earning per working hour = spare price. <b>Cost per working hour</b> of a spare = (price + earnings lost while fitting) ÷ life in hours.</li>
         <li><b>Idle days</b> = delivery date (or today, if not delivered) minus the date the spare was needed, if machines were stopped waiting.</li>
         <li><b>Domino</b>: a machine down for D days stops the next machine for D minus its buffer days (work in hand). Lost money = idle days × working hours a day × earning per working hour, for every machine stopped.</li>
+        <li><b>Indent warning</b>: hours run now = hours read + days since reading × working hours a day. Wears out in (life − hours run now) ÷ working hours a day. Raise indent by = wear-out date − lead time − safety margin. If it would arrive after wear-out, the idle days are costed with the domino, as for late supplies.</li>
         <li><b>Supplier on time %</b> = scored orders delivered by the promised date ÷ scored orders. <b>Penalty (LD)</b> = order value × penalty % × weeks late (part weeks count as full weeks), up to the cap. The 0.5% a week and 10% cap are made-up examples: use your contract terms.</li>
         <li>"Value of one unit of work" is the part of the mine's earning you credit to that machine. All figures here are <b>made up</b> for the MDP exercise.</li>
       </ul>

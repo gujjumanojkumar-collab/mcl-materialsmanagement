@@ -106,3 +106,13 @@
   orders added to the sample so the grades vary. Known problem: browsers that
   opened the page before keep the old sample until "Reset to sample figures".
   Next: reorder levels or indent early warning.
+- Indent early warning (Claude): new "Indent warning" section and menu link.
+  A list of spares fitted on machines (life in hours, hours run, date read,
+  lead time, safety margin, price, indent raised yes/no) with add, edit and
+  remove. For each: life used, wear-out date, "raise indent by" date and a
+  status (Raise indent now / Raise within N days / On track / Indent raised /
+  Decide first when the machine loses money). If it would arrive after
+  wear-out even if raised today, the loss is costed with the domino. Shows
+  the real average indent-to-delivery days from the purchase orders. Urgent
+  ones appear in "What to do next". Six made-up fitted spares in the sample.
+  Next: reorder levels for stock items; connect to Vercel.

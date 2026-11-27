@@ -25,7 +25,15 @@ var SAMPLE = {
     aName: 'Original make (OEM)', aPrice: 20000000, aLife: 15000, aFit: 72, aLead: 180,
     bName: 'Rebuilt / other make', bPrice: 13000000, bLife: 9000, bFit: 72, bLead: 90
   },
-  ld: { rate: 0.5, cap: 10 },   // penalty for late supply: % of order value per week, and the cap (made up)
+  ld: { rate: 0.5, cap: 10 },
+  fitted: [   // spares now fitted on machines, for the indent early warning (made up)
+    { id: 'W1', item: 'Hoist rope set', machine: 'SH-01', life: 3000, run: 800, readOn: '2026-11-25', lead: 130, safety: 15, price: 1800000, raised: 'no' },
+    { id: 'W2', item: 'Rotary head gearbox', machine: 'DR-03', life: 6000, run: 5300, readOn: '2026-11-25', lead: 120, safety: 15, price: 2400000, raised: 'no' },
+    { id: 'W3', item: 'Tyres 27.00 R49 (set of 6)', machine: 'DP-07', life: 5000, run: 4400, readOn: '2026-11-25', lead: 110, safety: 15, price: 7200000, raised: 'yes' },
+    { id: 'W4', item: 'Bucket lip and adapters', machine: 'HE-02', life: 8000, run: 6900, readOn: '2026-11-25', lead: 90, safety: 15, price: 1100000, raised: 'no' },
+    { id: 'W5', item: 'Undercarriage assembly', machine: 'SH-01', life: 15000, run: 400, readOn: '2026-11-25', lead: 240, safety: 30, price: 20000000, raised: 'no' },
+    { id: 'W6', item: 'Engine (overhaul)', machine: 'DP-11', life: 12000, run: 11800, readOn: '2026-11-25', lead: 100, safety: 15, price: 1500000, raised: 'no' }
+  ],   // penalty for late supply: % of order value per week, and the cap (made up)
   orders: [
     { id: 'PO-26-014', item: 'Undercarriage assembly (track set)', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor A', value: 20000000, urgency: 'High', status: 'Resolved', indent: '2026-03-02', po: '2026-06-20', promised: '2026-09-30', required: '2026-09-15', actual: '2026-10-28', stopped: 1 },
     { id: 'PO-26-009', item: 'Engine overhaul kit', machine: 'DP-11', location: 'Coal bench 2', supplier: 'Vendor E', value: 1500000, urgency: 'Medium', status: 'Resolved', indent: '2026-02-10', po: '2026-05-30', promised: '2026-07-15', required: '2026-07-01', actual: '2026-08-20', stopped: 1 },
@@ -218,6 +226,11 @@ function renderSummary() {
     var avg = slow.reduce(function (s, x) { return s + x.r.indentToPO; }, 0) / slow.length;
     if (avg > INDENT_TO_PO_NORM) acts.push(['warn', 'Process', 'Indent to purchase order takes <b>' + Math.round(avg) + ' days</b> on average against a norm of ' + INDENT_TO_PO_NORM + '. Start indents for long-lead spares earlier, or use rate contracts.']);
   }
+  fittedList().forEach(function (w) {
+    var r = calcWear(w);
+    if (r.level === 'bad') acts.push(['bad', 'Indent', 'Raise the indent now for <b>' + esc(w.item) + '</b> (' + esc(w.machine) + ').' + (r.gap > 0 ? ' Even today it would arrive ' + r.gap + ' days after the old part wears out — about ' + esc(rs(r.lost)) + ' at risk.' : '')]);
+    else if (r.level === 'warn' && w.raised !== 'yes' && r.c && r.c.marginHr > 0) acts.push(['warn', 'Indent', 'Raise the indent for <b>' + esc(w.item) + '</b> (' + esc(w.machine) + ') by ' + dstr(r.raiseBy) + '.']);
+  });
   calcSuppliers().filter(function (x) { return x.level === 'bad'; }).forEach(function (x) {
     acts.push(['bad', 'Supplier', '<b>' + esc(x.name) + '</b> delivered ' + Math.round(x.onTimePct) + '% on time and cost ' + esc(rs(x.lost)) + ' in lost production. Keep a second supplier for critical spares and recover the penalty of ' + esc(rs(x.ld)) + '.']);
   });
@@ -278,6 +291,7 @@ function buildSpare() {
   var opts = S.machines.map(function (m) { return '<option value="' + esc(m.id) + '">' + esc(m.id + ' · ' + m.name) + '</option>'; }).join('');
   $('spareMachine').innerHTML = opts;
   $('poMachine').innerHTML = opts;
+  $('wMachine').innerHTML = opts;
   document.querySelectorAll('[data-s]').forEach(function (el) { el.value = S.spare[el.dataset.s]; });
 }
 function renderSpare() {
@@ -408,6 +422,76 @@ function saveForm(ev) {
 }
 
 
+/* ---------------- Indent early warning ---------------- */
+function fittedList() { if (!S.fitted) S.fitted = clone(SAMPLE.fitted); return S.fitted; }
+function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + Math.round(n)); return x; }
+function dstr(d) { return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
+function calcWear(w) {
+  var m = machine(w.machine), now = today(), r = { m: m };
+  if (!m) { r.level = 'plain'; r.label = 'Machine not found'; return r; }
+  var c = calcMachine(m); r.c = c;
+  var read = day(w.readOn) || now;
+  r.runNow = num(w.run) + Math.max(0, diff(read, now)) * c.hrsDay;
+  r.used = Math.min(100, r.runNow / Math.max(1, num(w.life)) * 100);
+  r.remHrs = Math.max(0, num(w.life) - r.runNow);
+  r.daysLeft = c.hrsDay > 0 ? r.remHrs / c.hrsDay : Infinity;
+  r.wearOut = isFinite(r.daysLeft) ? addDays(now, r.daysLeft) : null;
+  r.raiseBy = r.wearOut ? addDays(r.wearOut, -(num(w.lead) + num(w.safety))) : null;
+  r.toRaise = r.raiseBy ? diff(now, r.raiseBy) : Infinity;
+  r.arriveIfToday = addDays(now, num(w.lead));
+  r.gap = r.wearOut ? diff(r.wearOut, r.arriveIfToday) : -Infinity;      // >0: arrives after wear-out
+  r.chain = r.gap > 0 ? domino(w.machine, r.gap, 1, 0, {}) : [];
+  r.lost = r.chain.reduce(function (t, x) { return t + x.lost; }, 0);
+  if (w.raised === 'yes') { r.level = 'plain'; r.label = 'Indent raised'; }
+  else if (c.marginHr <= 0) { r.level = 'warn'; r.label = 'Decide first'; }
+  else if (r.toRaise <= 0) { r.level = 'bad'; r.label = 'Raise indent now'; }
+  else if (r.toRaise <= 30) { r.level = 'warn'; r.label = 'Raise within ' + r.toRaise + ' days'; }
+  else { r.level = 'ok'; r.label = 'On track'; }
+  return r;
+}
+function renderIndent() {
+  var rec = S.orders.map(calcOrder).filter(function (r, i) { return r.received && day(S.orders[i].indent); });
+  var avg = rec.length ? S.orders.filter(function (o) { return o.actual && o.indent; }).reduce(function (t, o) { return t + diff(day(o.indent), day(o.actual)); }, 0) / rec.length : 0;
+  $('leadHint').textContent = rec.length ? 'Your purchase orders so far took ' + Math.round(avg) + ' days on average from indent to delivery — use real figures like this for the lead time.' : '';
+  var order = { bad: 0, warn: 1, ok: 2, plain: 3 };
+  var list = fittedList().map(function (w, i) { return { w: w, r: calcWear(w), i: i }; })
+    .sort(function (a, b) { return order[a.r.level] - order[b.r.level] || a.r.toRaise - b.r.toRaise; });
+  $('wList').innerHTML = list.map(function (x) {
+    var w = x.w, r = x.r, say;
+    if (!r.c) say = 'Pick a machine that is in the Machines list.';
+    else if (w.raised === 'yes') say = 'Indent already raised. Track it under Late supplies. The old part wears out ' + (r.wearOut ? 'around ' + dstr(r.wearOut) : 'later') + '.';
+    else if (r.c.marginHr <= 0) say = esc(w.machine) + ' loses money every hour it runs. Decide whether to keep the machine before buying this spare for ' + rs(num(w.price)) + '.';
+    else if (r.gap > 0) say = 'Even if you raise the indent today, it should arrive around <b>' + dstr(r.arriveIfToday) + '</b>, <b>' + r.gap + ' days after</b> the old part wears out. Expected loss: <b>' + rs(r.lost) + '</b>' + (r.chain.length > 1 ? ' including machines stopped by the domino' : '') + '. Ask for urgent supply or a rate-contract item.';
+    else if (r.toRaise <= 0) say = 'Raise the indent today. It should arrive around ' + dstr(r.arriveIfToday) + ', only ' + (-r.gap) + ' days before the old part wears out.';
+    else say = 'Raise the indent by <b>' + dstr(r.raiseBy) + '</b>. Every day after that eats into the safety margin; once it is used up, each day late stops ' + esc(w.machine) + ' and costs about ' + rs(r.c.hrsDay * r.c.marginHr) + ' a day, before the domino.';
+    return '<div class="panel"><div class="mcard"><div class="head"><div><h3>' + esc(w.item) + '</h3><div class="sub">' + esc(w.machine) + (r.m ? ' · ' + esc(r.m.name) : '') + ' · ' + rs(num(w.price)) + '</div></div><span class="pill ' + r.level + '">' + esc(r.label) + '</span></div></div>' +
+      (r.c ? '<div class="muted" style="font-size:14px">Life used: ' + Math.round(r.used) + '% (' + int(r.runNow) + ' of ' + int(num(w.life)) + ' h)</div><div class="lifebar ' + r.level + '"><i style="width:' + r.used.toFixed(1) + '%"></i></div>' +
+      '<div class="steps"><div class="step"><div class="l">Wears out around</div><div class="v">' + (r.wearOut ? dstr(r.wearOut) : '–') + '</div><div class="l">' + (isFinite(r.daysLeft) ? 'in ' + Math.round(r.daysLeft) + ' days' : 'machine not working') + '</div></div>' +
+      '<div class="step"><div class="l">Raise indent by</div><div class="v' + (r.level === 'bad' ? ' bad' : '') + '">' + (r.raiseBy ? dstr(r.raiseBy) : '–') + '</div><div class="l">' + (isFinite(r.toRaise) ? (r.toRaise < 0 ? (-r.toRaise) + ' days ago' : r.toRaise === 0 ? 'today' : 'in ' + r.toRaise + ' days') : '') + '</div></div>' +
+      '<div class="step"><div class="l">Lead time + safety</div><div class="v">' + (num(w.lead) + num(w.safety)) + ' days</div><div class="l">' + num(w.lead) + ' + ' + num(w.safety) + '</div></div></div>' : '') +
+      '<p class="say" style="margin-top:0">' + say + '</p>' +
+      '<div class="btns no-print" style="margin-top:10px"><button class="btn small" type="button" data-wedit="' + x.i + '">Edit</button><button class="btn small danger" type="button" data-wdel="' + x.i + '">Remove</button></div></div>';
+  }).join('') || '<p class="muted">No fitted spares yet. Add one above.</p>';
+  return list;
+}
+var W_KEYS = ['item', 'machine', 'life', 'run', 'readOn', 'lead', 'safety', 'price', 'raised'], wEditing = -1;
+function openWForm(i) {
+  wEditing = i;
+  var f = $('wForm'), w = i >= 0 ? fittedList()[i] : { machine: S.machines[0].id, safety: 15, raised: 'no', readOn: new Date().toISOString().slice(0, 10) };
+  W_KEYS.forEach(function (k) { f.elements[k].value = w[k] == null ? '' : w[k]; });
+  $('wFormTitle').textContent = i >= 0 ? 'Edit ' + w.item : 'Add a fitted spare';
+  f.hidden = false; f.elements.item.focus();
+}
+function saveWForm(ev) {
+  ev.preventDefault();
+  var f = $('wForm'), w = wEditing >= 0 ? fittedList()[wEditing] : {};
+  W_KEYS.forEach(function (k) { w[k] = f.elements[k].value.trim(); });
+  ['life', 'run', 'lead', 'safety', 'price'].forEach(function (k) { w[k] = num(w[k]); });
+  if (wEditing < 0) { w.id = 'W' + Date.now().toString().slice(-6); fittedList().push(w); }
+  f.hidden = true; wEditing = -1;
+  save(); renderAll();
+}
+
 /* ---------------- Supplier scorecard ---------------- */
 function ldTerms() { if (!S.ld) S.ld = clone(SAMPLE.ld); return S.ld; }
 function calcSuppliers() {
@@ -482,7 +566,7 @@ function renderSuppliers() {
 
 /* ---------------- Wiring ---------------- */
 function renderAll() {
-  try { renderMachines(); renderSpare(); renderLinks(); renderOrders(); renderSuppliers(); renderSummary(); }
+  try { renderMachines(); renderSpare(); renderLinks(); renderIndent(); renderOrders(); renderSuppliers(); renderSummary(); }
   catch (e) { showError('Something went wrong while working out the figures. Please pass this message on:', e); }
 }
 
@@ -493,9 +577,9 @@ function start() {
 
   document.addEventListener('input', function (e) {
     var t = e.target, d = t.dataset;
-    if (d.m != null) { S.machines[+d.m][d.k] = num(t.value); save(); renderMachines(); renderSpare(); renderOrders(); renderSuppliers(); renderSummary(); }
+    if (d.m != null) { S.machines[+d.m][d.k] = num(t.value); save(); renderMachines(); renderSpare(); renderIndent(); renderOrders(); renderSuppliers(); renderSummary(); }
     else if (d.s != null) { S.spare[d.s] = t.type === 'number' ? num(t.value) : t.value; save(); renderSpare(); }
-    else if (d.l != null) { S.links[+d.l][d.k] = num(t.value); save(); renderOrders(); renderSuppliers(); renderSummary(); }
+    else if (d.l != null) { S.links[+d.l][d.k] = num(t.value); save(); renderIndent(); renderOrders(); renderSuppliers(); renderSummary(); }
     else if (t.id === 'ldRate' || t.id === 'ldCap') { ldTerms()[t.id === 'ldRate' ? 'rate' : 'cap'] = num(t.value); save(); renderSuppliers(); }
   });
   document.addEventListener('change', function (e) {
@@ -510,6 +594,14 @@ function start() {
   $('addPO').addEventListener('click', function () { openForm(-1); });
   $('poCancel').addEventListener('click', function () { $('poForm').hidden = true; editing = -1; });
   $('poForm').addEventListener('submit', saveForm);
+  $('addW').addEventListener('click', function () { openWForm(-1); });
+  $('wCancel').addEventListener('click', function () { $('wForm').hidden = true; wEditing = -1; });
+  $('wForm').addEventListener('submit', saveWForm);
+  $('wList').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.wedit != null) { openWForm(+b.dataset.wedit); $('wForm').scrollIntoView({ block: 'start' }); }
+    if (b.dataset.wdel != null && confirm('Remove "' + fittedList()[+b.dataset.wdel].item + '"?')) { fittedList().splice(+b.dataset.wdel, 1); save(); renderAll(); }
+  });
   $('reset').addEventListener('click', function () {
     if (!confirm('Put back the made-up sample figures? Your changes in this browser will be lost.')) return;
     S = clone(SAMPLE); save(); buildMachineCards(); buildSpare(); renderAll();
