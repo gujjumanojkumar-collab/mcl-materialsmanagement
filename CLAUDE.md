@@ -116,3 +116,7 @@
   the real average indent-to-delivery days from the purchase orders. Urgent
   ones appear in "What to do next". Six made-up fitted spares in the sample.
   Next: reorder levels for stock items; connect to Vercel.
+- Live on Vercel (team + Claude): https://mcl-materialsmanagement.vercel.app
+  publishes from the main branch. Checked: latest version live, all six
+  sections load, no errors, phone layout fine. Next: reorder levels for
+  stock items, or real figures in place of the made-up ones.
