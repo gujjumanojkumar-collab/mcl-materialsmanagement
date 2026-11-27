@@ -1,5 +1,6 @@
 /* mm.js - all calculations and drawing for the MM machine and spares monitor.
-   Everything is kept in this browser (localStorage). All sample figures are MADE UP. */
+   Data is kept in the shared Supabase table mm_records when config.js is filled in;
+   otherwise in this browser (localStorage). All sample figures are MADE UP. */
 (function () {
 'use strict';
 
@@ -96,9 +97,15 @@ function load() {
   try { var t = localStorage.getItem(KEY); if (t) { var o = JSON.parse(t); if (o && o.machines && o.orders) return o; } } catch (e) {}
   return clone(SAMPLE);
 }
+function setSaved(t) { $('saved').textContent = t; }
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(S)); $('saved').textContent = 'Saved in this browser.'; }
-  catch (e) { $('saved').textContent = 'Could not save in this browser: ' + e.message; }
+  if (db) {                       // shared database mode
+    if (dbReady) scheduleSync();
+    else setSaved('Not saved: first copy the sample data into the shared database (button at the top).');
+    return;
+  }
+  try { localStorage.setItem(KEY, JSON.stringify(S)); setSaved('Saved in this browser only.'); }
+  catch (e) { setSaved('Could not save in this browser: ' + e.message); }
 }
 function machine(id) { for (var i = 0; i < S.machines.length; i++) if (S.machines[i].id === id) return S.machines[i]; return null; }
 
@@ -741,6 +748,168 @@ function renderSuppliers() {
   return list;
 }
 
+/* ---------------- Shared database (Supabase) ----------------
+   One table, mm_records. Each machine, spare, fitted spare, purchase order
+   and setting is one row: kind + record_key + location/urgency/status + data (all fields).
+   "Remove" never deletes a row: it sets hidden = true. */
+var TABLE = 'mm_records';
+var db = null, dbReady = false, known = {}, synced = {}, settingIds = {}, pend = {};
+var syncTimer = null, syncing = false, syncAgain = false;
+var URG = ['Low', 'Medium', 'High'], STAT = ['Open', 'In progress', 'Resolved'];
+function dbConfigured() { return !!(window.supabase && window.SUPABASE_URL && window.SUPABASE_PUBLISHABLE_KEY); }
+function pickOne(v, list, d) { return list.indexOf(v) >= 0 ? v : d; }
+function strip(o) { var c = {}; Object.keys(o || {}).forEach(function (k) { if (k.charAt(0) !== '_') c[k] = o[k]; }); return c; }
+function newId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) { var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+}
+// Every record in the page, as table rows
+function stateRows() {
+  var out = [];
+  function add(obj, kind, key, loc, urg, st) {
+    out.push({ getId: function () { return obj._id; }, setId: function (id) { obj._id = id; },
+      p: { kind: kind, record_key: String(key || ''), location: String(loc || ''), urgency: urg, status: st, data: strip(obj) } });
+  }
+  S.machines.forEach(function (m) { add(m, 'machine', m.id, m.work, 'Medium', 'Open'); });
+  sparesList().forEach(function (sp) { add(sp, 'spare', sp.code || sp.item, sp.store, pickOne(sp.critical, URG, 'Medium'), 'Open'); });
+  fittedList().forEach(function (w) { add(w, 'fitted', w.machine + ' ' + w.item, w.machine, 'Medium', w.raised === 'yes' ? 'In progress' : 'Open'); });
+  S.orders.forEach(function (o) { add(o, 'order', o.id, o.location, pickOne(o.urgency, URG, 'Medium'), pickOne(o.status, STAT, 'Open')); });
+  var sets = { spare: strip(S.spare), ld: strip(ldTerms()), abc: strip(abcCuts()), links: { list: S.links.map(strip) } };
+  Object.keys(sets).forEach(function (k) {
+    out.push({ getId: function () { return settingIds[k]; }, setId: function (id) { settingIds[k] = id; },
+      p: { kind: 'setting', record_key: k, location: '', urgency: 'Low', status: 'Open', data: sets[k] } });
+  });
+  return out;
+}
+function markAllSynced() { stateRows().forEach(function (r) { var id = r.getId(); if (id) synced[id] = JSON.stringify(r.p); }); }
+function scheduleSync() { clearTimeout(syncTimer); setSaved('Saving to the shared database…'); syncTimer = setTimeout(function () { syncTimer = null; sync(); }, 700); }
+async function sync() {
+  if (!db || !dbReady) return;
+  if (syncing) { syncAgain = true; return; }
+  syncing = true;
+  try {
+    var rows = stateRows(), seen = {}, inserts = [], updates = [];
+    rows.forEach(function (r) {
+      var json = JSON.stringify(r.p), id = r.getId();
+      if (id && known[id]) { seen[id] = true; if (synced[id] !== json) updates.push({ id: id, p: r.p, json: json }); }
+      else { if (!id) { id = newId(); r.setId(id); } seen[id] = true; if (!pend[id]) inserts.push({ id: id, p: r.p, json: json }); }
+    });
+    var gone = Object.keys(known).filter(function (id) { return !seen[id]; });
+    for (var i = 0; i < updates.length; i++) {
+      var u = updates[i];
+      var res = await db.from(TABLE).update(Object.assign({}, u.p, { updated_at: new Date().toISOString() })).eq('id', u.id);
+      if (res.error) throw res.error;
+      synced[u.id] = u.json;
+    }
+    if (inserts.length) {
+      var base = Date.now();
+      inserts.forEach(function (x) { pend[x.id] = true; });
+      var ins = await db.from(TABLE).insert(inserts.map(function (x, n) { return Object.assign({ id: x.id, created_at: new Date(base + n).toISOString() }, x.p); }));
+      inserts.forEach(function (x) { delete pend[x.id]; });
+      if (ins.error) throw ins.error;
+      inserts.forEach(function (x) { known[x.id] = true; synced[x.id] = x.json; });
+    }
+    if (gone.length) {
+      var h = await db.from(TABLE).update({ hidden: true, updated_at: new Date().toISOString() }).in('id', gone);
+      if (h.error) throw h.error;
+      gone.forEach(function (id) { delete known[id]; delete synced[id]; });
+    }
+    setSaved('Saved to the shared database at ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '.');
+  } catch (e) {
+    showError('Could not save to the shared database. Your last change shows on this screen only. Please pass this message on:', e);
+    setSaved('Not saved to the shared database.');
+  } finally {
+    syncing = false;
+    if (syncAgain) { syncAgain = false; scheduleSync(); }
+  }
+}
+async function loadFromDb() {
+  var res = await db.from(TABLE).select('*').eq('hidden', false).order('created_at', { ascending: true });
+  if (res.error) throw res.error;
+  var st = { machines: [], spares: [], fitted: [], orders: [], links: [] };
+  known = {}; synced = {}; settingIds = {};
+  var gotLinks = false;
+  res.data.forEach(function (r) {
+    known[r.id] = true;
+    var o = Object.assign({}, r.data || {});
+    if (r.kind === 'setting') {
+      settingIds[r.record_key] = r.id;
+      if (r.record_key === 'links') { st.links = (o.list || []); gotLinks = true; }
+      else if (r.record_key === 'spare' || r.record_key === 'ld' || r.record_key === 'abc') st[r.record_key] = o;
+      return;
+    }
+    o._id = r.id;
+    if (r.kind === 'machine') st.machines.push(o);
+    else if (r.kind === 'spare') st.spares.push(o);
+    else if (r.kind === 'fitted') st.fitted.push(o);
+    else if (r.kind === 'order') st.orders.push(o);
+  });
+  st.empty = !st.machines.length && !st.orders.length && !st.spares.length && !st.fitted.length;
+  if (!st.spare) st.spare = clone(SAMPLE.spare);
+  if (!gotLinks) st.links = clone(SAMPLE.links);
+  if (!st.spare.machine && st.machines.length) st.spare.machine = st.machines[0].id;
+  return st;
+}
+function editingNow() {
+  var a = document.activeElement;
+  if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) return true;
+  return !$('poForm').hidden || !$('spForm').hidden || !$('wForm').hidden;
+}
+function redraw() { buildMachineCards(); buildSpare(); renderAll(); }
+async function refreshFromDb(force) {
+  if (!db || !dbReady || syncing || syncTimer) return;
+  if (!force && (document.hidden || editingNow())) return;
+  try {
+    var st = await loadFromDb(); delete st.empty;
+    S = st; markAllSynced(); redraw();
+    setSaved('Shared database · up to date at ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '.');
+  } catch (e) { showError('Could not read the shared database. Please pass this message on:', e); }
+}
+function showDbNote(html) { $('dbNote').innerHTML = html; $('dbNote').hidden = !html; }
+async function startDb() {
+  try { db = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_PUBLISHABLE_KEY); }
+  catch (e) { db = null; showError('Could not connect to the shared database, so this page keeps data in this browser only. Please pass this message on:', e); S = load(); redraw(); return; }
+  setSaved('Reading the shared database…');
+  try {
+    var st = await loadFromDb();
+    if (st.empty) {
+      S = clone(SAMPLE); redraw();
+      showDbNote('<b>The shared database is empty.</b> The figures below are the sample. <button class="btn primary small" type="button" id="seedDb">Copy the sample data into the shared database</button>');
+      $('seedDb').addEventListener('click', async function () {
+        this.disabled = true;
+        dbReady = true; known = {}; synced = {}; settingIds = {};
+        S = clone(SAMPLE);
+        await sync();
+        showDbNote(''); setSaved('Sample data copied. Everyone with the link now sees the same figures.');
+        setInterval(function () { refreshFromDb(false); }, 60000);
+      });
+      setSaved('Shared database: empty.');
+      return;
+    }
+    delete st.empty;
+    S = st; dbReady = true; markAllSynced(); redraw();
+    setSaved('Shared database · everyone with the link sees these figures.');
+    setInterval(function () { refreshFromDb(false); }, 60000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) refreshFromDb(false); });
+  } catch (e) {
+    db = null;
+    showError('Could not read the shared database, so this page shows the figures kept in this browser. Please pass this message on:', e);
+    S = load(); redraw();
+  }
+}
+async function resetDb() {
+  if (!confirm('Replace everything in the SHARED database with the sample figures? Everyone will see this. Old records are hidden, not deleted.')) return;
+  try {
+    var ids = Object.keys(known);
+    if (ids.length) {
+      var h = await db.from(TABLE).update({ hidden: true, updated_at: new Date().toISOString() }).in('id', ids);
+      if (h.error) throw h.error;
+    }
+    known = {}; synced = {}; settingIds = {};
+    S = clone(SAMPLE); redraw(); await sync();
+  } catch (e) { showError('Could not reset the shared database. Please pass this message on:', e); }
+}
+
 /* ---------------- Wiring ---------------- */
 function renderAll() {
   try { renderMachines(); renderStock(); renderAbc(); renderSpare(); renderLinks(); renderIndent(); renderOrders(); renderSuppliers(); renderSummary(); }
@@ -748,9 +917,12 @@ function renderAll() {
 }
 
 function start() {
-  S = load();
   if (!window.Chart) showError('The charts could not load (no internet, or the chart library was blocked). The figures below still work.', 'Chart.js did not load from cdn.jsdelivr.net');
-  buildMachineCards(); buildSpare(); renderAll();
+  if (dbConfigured()) { S = clone(SAMPLE); redraw(); startDb(); }
+  else {
+    S = load(); redraw();
+    if (window.SUPABASE_URL && !window.supabase) showError('The shared database library could not load, so this page keeps data in this browser only.', 'supabase-js did not load from cdn.jsdelivr.net');
+  }
 
   document.addEventListener('input', function (e) {
     var t = e.target, d = t.dataset;
@@ -792,8 +964,10 @@ function start() {
     if (b.dataset.wdel != null && confirm('Remove "' + fittedList()[+b.dataset.wdel].item + '"?')) { fittedList().splice(+b.dataset.wdel, 1); save(); renderAll(); }
   });
   $('reset').addEventListener('click', function () {
+    if (db && dbReady) { resetDb(); return; }
+    if (db) return;
     if (!confirm('Put back the made-up sample figures? Your changes in this browser will be lost.')) return;
-    S = clone(SAMPLE); save(); buildMachineCards(); buildSpare(); renderAll();
+    S = clone(SAMPLE); save(); redraw();
   });
   if (window.matchMedia) {
     var mq = window.matchMedia('(prefers-color-scheme: dark)');

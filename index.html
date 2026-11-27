@@ -32,6 +32,7 @@
 
 <main class="wrap">
   <div id="err" role="alert"></div>
+  <div id="dbNote" class="dbnote" hidden></div>
 
   <!-- 1. SUMMARY -->
   <section id="summary">
@@ -286,9 +287,11 @@
   </section>
 </main>
 
-<footer><div class="wrap"><span>MCL team 5 · IIM Sambalpur MDP · all figures made up</span><span id="saved">Changes are kept in this browser.</span></div></footer>
+<footer><div class="wrap"><span>MCL team 5 · IIM Sambalpur MDP · all figures made up</span><span id="saved">Loading…</span></div></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <script src="mm.js"></script>
 </body>
 </html>

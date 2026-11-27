@@ -81,8 +81,10 @@
   reads the dashboard, chases suppliers and decides on spares and disposal.
 - Files: index.html (the page), mm.js (data and calculations), style.css,
   config.js (empty Supabase settings, for later).
-- Data: made-up sample data inside mm.js, saved per browser (localStorage).
-  No database yet. If one is added, the table would be purchase_orders.
+- Data: one shared Supabase table, mm_records (see database/01-setup.sql),
+  used when config.js is filled in; otherwise each browser keeps its own copy
+  (localStorage). Each row: kind (machine / spare / fitted / order / setting),
+  record_key, location, urgency, status, data (all fields as JSON), hidden.
 
 ## Progress Log (newest entry at the bottom)
 - Phase 0 (Claude): one-page dashboard built inside the mcl-team-5 repo in
@@ -136,3 +138,13 @@
   counts and spend per class, a bar chart coloured by class, the ranked list
   with running total, and an ABC x critical (High/Medium/Low) grid with what
   to do for each box. Each spare card in the Spares list now shows its class.
+- Shared database (Claude): database/01-setup.sql creates mm_records (one
+  table for all records, RLS: read, add, update; no delete). index.html loads
+  supabase-js and config.js. When config.js is filled in, the page reads all
+  records from the table, saves each change about 1 second after typing (only
+  the changed record), "Remove" sets hidden = true, re-reads every minute
+  (not while someone is typing), and "Reset to sample figures" hides old rows
+  and adds the sample. An empty table shows a button "Copy the sample data
+  into the shared database". Tested with a stand-in database, not the real
+  one. Next: Data Keeper creates a Supabase project, runs 01-setup.sql, fills
+  in config.js; then SAP import.

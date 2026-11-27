@@ -165,6 +165,7 @@ input:focus-visible,select:focus-visible,.btn:focus-visible{outline:3px solid va
 /* Notes, errors, footer */
 #err:not(:empty){background:var(--bad-bg);color:var(--bad);border-radius:var(--r);padding:12px 14px;margin-top:16px;font-weight:600}
 #err code{display:block;font-weight:400;margin-top:4px;word-break:break-word}
+.dbnote{background:var(--warn-bg);color:var(--ink);border-radius:var(--r);padding:12px 14px;margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .notes{font-size:15px;color:var(--muted)}
 .notes li{margin-bottom:6px}
 footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;color:var(--muted);font-size:13.5px;padding-block:32px}
