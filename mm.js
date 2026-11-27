@@ -6,16 +6,28 @@
 
 var HOURS_MONTH = 720;          // 30 days x 24 hours
 var INDENT_TO_PO_NORM = 60;     // days we expect from indent to purchase order (made up)
-var KEY = 'mm-monitor-v1';
+var KEY = 'mm-monitor-v2';   // v2: sample costs from public sources
 
 /* ---------------- Sample data (made up) ---------------- */
+/* Records (machine numbers, spares, orders, suppliers) are MADE UP.
+   Costs and rates are set from public sources (see "Where the figures come from" on the page):
+   - Overburden removal hired out: about Rs 114 per BCM (NCL Khadia OCP award: Rs 1,807.8 Cr for
+     1,585.5 lakh BCM). Split here as drilling and blasting 15% (Rs 17), loading 35% (Rs 40),
+     hauling 50% (Rs 57). A 250 mm hole yields about 56 BCM per metre (7 m x 8 m), so Rs 950 a metre.
+   - Coal: Rs 114 per BCM / 1.5 t per BCM = Rs 76 a tonne for the whole chain; loading 35% = Rs 27.
+   - 100 t dumper: Rs 250 Cr for 28 BEML BH100 = about Rs 8.9 Cr each; over 10 years about Rs 7.4 L a month,
+     plus crew and interest = Rs 10 L. Diesel: CIL buys 4 lakh kL for Rs 3,500 Cr = about Rs 88 a litre;
+     8 to 10 litres a trip, about 3 trips an hour.
+   - 27.00 R49 bias tyre: GeM bid, 112 tyres estimated at Rs 3 Cr = about Rs 2.7 L each.
+   - 20 m3 electric rope shovel: Rs 118 to 133 Cr (Coal India orders); a 10 m3 one taken as about Rs 60 Cr.
+   Everything else (running costs, lead times, stocks) is an estimate. */
 var SAMPLE = {
   machines: [
-    { id: 'SH-01', name: 'Electric rope shovel 10 m³', work: 'Overburden loading', unit: 'BCM', count: 1, avail: 82, util: 70, output: 600, value: 120, running: 14000, fixed: 5500000 },
-    { id: 'HE-02', name: 'Hydraulic excavator 5 m³', work: 'Coal loading', unit: 't', count: 1, avail: 75, util: 55, output: 450, value: 160, running: 9000, fixed: 3000000 },
-    { id: 'DP-07', name: 'Rear dumper 100 t', work: 'Overburden hauling', unit: 'BCM', count: 6, avail: 70, util: 50, output: 180, value: 60, running: 6500, fixed: 1200000 },
-    { id: 'DR-03', name: 'Blast-hole drill 250 mm', work: 'Drilling', unit: 'm', count: 1, avail: 78, util: 50, output: 28, value: 900, running: 5000, fixed: 900000 },
-    { id: 'DP-11', name: 'Old rear dumper 85 t (14 years)', work: 'Coal hauling', unit: 'BCM', count: 1, avail: 45, util: 50, output: 140, value: 60, running: 9000, fixed: 800000 }
+    { id: 'SH-01', name: 'Electric rope shovel 10 m³', work: 'Overburden loading', unit: 'BCM', count: 1, avail: 82, util: 70, output: 600, value: 40, running: 8000, fixed: 4100000 },
+    { id: 'HE-02', name: 'Hydraulic excavator 5 m³', work: 'Coal loading', unit: 't', count: 1, avail: 75, util: 55, output: 450, value: 27, running: 6500, fixed: 1440000 },
+    { id: 'DP-07', name: 'Rear dumper 100 t', work: 'Overburden hauling', unit: 'BCM', count: 6, avail: 70, util: 50, output: 160, value: 57, running: 5400, fixed: 1000000 },
+    { id: 'DR-03', name: 'Blast-hole drill 250 mm', work: 'Drilling', unit: 'm', count: 1, avail: 78, util: 50, output: 28, value: 950, running: 5000, fixed: 900000 },
+    { id: 'DP-11', name: 'Old rear dumper 85 t (14 years)', work: 'Overburden hauling', unit: 'BCM', count: 1, avail: 45, util: 50, output: 130, value: 57, running: 8600, fixed: 700000 }
   ],
   links: [
     { from: 'DR-03', to: 'SH-01', buffer: 4, idled: 1, why: 'blasted rock in hand runs out' },
@@ -35,7 +47,7 @@ var SAMPLE = {
     { code: 'MM-0104', item: 'Undercarriage idler', machine: 'SH-01', store: 'Central store', price: 650000, stock: 1, onOrder: 0, use: 0.1, lead: 150, safety: 30, critical: 'Medium', lastIssued: '2026-04-02', life: 15000 },
     { code: 'MM-0201', item: 'Bucket tooth', machine: 'HE-02', store: 'Area store East', price: 18000, stock: 60, onOrder: 0, use: 10, lead: 45, safety: 15, critical: 'Medium', lastIssued: '2026-11-18', life: 0 },
     { code: 'MM-0202', item: 'Hydraulic hose', machine: 'HE-02', store: 'Area store East', price: 12000, stock: 120, onOrder: 0, use: 6, lead: 30, safety: 15, critical: 'Low', lastIssued: '2026-11-05', life: 0 },
-    { code: 'MM-0301', item: 'Tyre 27.00 R49', machine: 'DP-07', store: 'Central store', price: 1200000, stock: 2, onOrder: 6, use: 1, lead: 110, safety: 15, critical: 'High', lastIssued: '2026-10-30', life: 5000 },
+    { code: 'MM-0301', item: 'Tyre 27.00 R49 (bias)', machine: 'DP-07', store: 'Central store', price: 270000, stock: 4, onOrder: 6, use: 2, lead: 110, safety: 15, critical: 'High', lastIssued: '2026-10-30', life: 5000 },
     { code: 'MM-0302', item: 'Brake disc', machine: 'DP-07', store: 'Central store', price: 140000, stock: 12, onOrder: 0, use: 1, lead: 75, safety: 15, critical: 'Medium', lastIssued: '2026-10-12', life: 0 },
     { code: 'MM-0401', item: 'Drill bit 250 mm', machine: 'DR-03', store: 'Area store East', price: 95000, stock: 1, onOrder: 0, use: 4, lead: 60, safety: 15, critical: 'High', lastIssued: '2026-11-22', life: 400 },
     { code: 'MM-0402', item: 'Rotary head gearbox', machine: 'DR-03', store: 'Central store', price: 2400000, stock: 0, onOrder: 0, use: 0.05, lead: 120, safety: 15, critical: 'High', lastIssued: '2025-02-14', life: 6000 },
@@ -45,7 +57,7 @@ var SAMPLE = {
   fitted: [   // spares now fitted on machines, for the indent early warning (made up)
     { id: 'W1', item: 'Hoist rope set', machine: 'SH-01', life: 3000, run: 800, readOn: '2026-11-25', lead: 130, safety: 15, price: 1800000, raised: 'no' },
     { id: 'W2', item: 'Rotary head gearbox', machine: 'DR-03', life: 6000, run: 5300, readOn: '2026-11-25', lead: 120, safety: 15, price: 2400000, raised: 'no' },
-    { id: 'W3', item: 'Tyres 27.00 R49 (set of 6)', machine: 'DP-07', life: 5000, run: 4400, readOn: '2026-11-25', lead: 110, safety: 15, price: 7200000, raised: 'yes' },
+    { id: 'W3', item: 'Tyres 27.00 R49 (set of 6)', machine: 'DP-07', life: 4000, run: 3500, readOn: '2026-11-25', lead: 110, safety: 15, price: 1620000, raised: 'yes' },
     { id: 'W4', item: 'Bucket lip and adapters', machine: 'HE-02', life: 8000, run: 6900, readOn: '2026-11-25', lead: 90, safety: 15, price: 1100000, raised: 'no' },
     { id: 'W5', item: 'Undercarriage assembly', machine: 'SH-01', life: 15000, run: 400, readOn: '2026-11-25', lead: 240, safety: 30, price: 20000000, raised: 'no' },
     { id: 'W6', item: 'Engine (overhaul)', machine: 'DP-11', life: 12000, run: 11800, readOn: '2026-11-25', lead: 100, safety: 15, price: 1500000, raised: 'no' }
@@ -55,7 +67,7 @@ var SAMPLE = {
     { id: 'PO-26-009', item: 'Engine overhaul kit', machine: 'DP-11', location: 'Coal bench 2', supplier: 'Vendor E', value: 1500000, urgency: 'Medium', status: 'Resolved', indent: '2026-02-10', po: '2026-05-30', promised: '2026-07-15', required: '2026-07-01', actual: '2026-08-20', stopped: 1 },
     { id: 'PO-26-021', item: 'Hoist rope set', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor B', value: 1800000, urgency: 'Low', status: 'Resolved', indent: '2026-07-01', po: '2026-08-05', promised: '2026-09-20', required: '2026-10-01', actual: '2026-09-28', stopped: 0 },
     { id: 'PO-26-027', item: 'Drill bit and rod set', machine: 'DR-03', location: 'East quarry', supplier: 'Vendor C', value: 950000, urgency: 'High', status: 'In progress', indent: '2026-08-10', po: '2026-09-25', promised: '2026-10-25', required: '2026-11-05', actual: '', stopped: 1 },
-    { id: 'PO-26-031', item: 'Tyres 27.00 R49 (set of 6)', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor D', value: 7200000, urgency: 'High', status: 'In progress', indent: '2026-07-15', po: '2026-09-01', promised: '2026-11-10', required: '2026-11-20', actual: '', stopped: 1 },
+    { id: 'PO-26-031', item: 'Tyres 27.00 R49 (set of 6)', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor D', value: 1620000, urgency: 'High', status: 'In progress', indent: '2026-07-15', po: '2026-09-01', promised: '2026-11-10', required: '2026-11-20', actual: '', stopped: 1 },
     { id: 'PO-26-035', item: 'Swing motor', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 2600000, urgency: 'Medium', status: 'Open', indent: '2026-09-05', po: '2026-10-20', promised: '2026-12-15', required: '2026-12-20', actual: '', stopped: 1 },
     { id: 'PO-26-004', item: 'Bucket teeth set', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 450000, urgency: 'Low', status: 'Resolved', indent: '2026-01-20', po: '2026-03-05', promised: '2026-04-10', required: '2026-04-30', actual: '2026-04-06', stopped: 0 },
     { id: 'PO-26-011', item: 'Hydraulic hose kit', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 320000, urgency: 'Low', status: 'Resolved', indent: '2026-04-02', po: '2026-05-10', promised: '2026-06-15', required: '2026-07-01', actual: '2026-06-12', stopped: 0 },

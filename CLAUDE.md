@@ -12,8 +12,10 @@
 - A tool with at most 3 pages. Today it is one page: index.html.
 - Every record has location, urgency (Low / Medium / High) and status
   (Open / In progress / Resolved), plus the columns in "Our tool" below.
-- All data is MADE UP. Never add real names, phone numbers, employee IDs or
-  real MCL figures.
+- Records are MADE UP. Costs and rates in the sample may come from PUBLIC
+  sources (tenders, orders, government data), listed with links on the page
+  under "Where the figures come from". Never add real names, phone numbers,
+  employee IDs or MCL internal figures.
 
 ## Technical rules
 1. Plain HTML, CSS and JavaScript only. Pages stay in the top folder; SQL
@@ -158,3 +160,14 @@
   import updates instead of doubling. Dates day.month.year; numbers
   1,23,456.00, 1.234,56 and SAP's trailing minus. "Download a sample file"
   gives a made-up file of each kind for practice. Next: realistic figures.
+- Public cost figures (Claude): sample costs and rates now come from public
+  sources, listed with links in a new "Where the figures come from" section:
+  overburden hired out about Rs 114/BCM (split drilling 15%, loading 35%,
+  hauling 50%), BEML 100 t dumper about Rs 8.9 Cr, 20 m3 shovel Rs 118-133 Cr,
+  diesel about Rs 88/litre and 8-10 litres a trip, 27.00 R49 tyre about
+  Rs 2.7 L, coal 1.5 t per BCM. Records (machines, spares, orders, suppliers)
+  are still made up. New results: Rs 2.57 Cr lost to late supplies, shovel
+  undercarriage pays back in about 91 days. Browser storage key changed to
+  mm-monitor-v2 so browsers load the new sample. Known problem: the MDP
+  summary doc and slides still show the old figures. Next: real Supabase
+  setup (config.js), then update the presentation figures.
