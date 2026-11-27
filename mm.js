@@ -976,4 +976,14 @@ function start() {
 }
 
 try { start(); } catch (e) { showError('The page could not start. Please pass this message on:', e); }
+
+// Small door for sap.js (the SAP import), which runs after this file.
+window.MM = {
+  state: function () { return S; },
+  spares: function () { return sparesList(); },
+  save: function () { save(); },
+  redraw: function () { redraw(); },
+  showError: showError,
+  sharedDb: function () { return !!(db && dbReady); }
+};
 })();

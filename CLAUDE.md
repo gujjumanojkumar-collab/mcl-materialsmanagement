@@ -79,8 +79,8 @@
   domino effect (drill stops -> shovel stops after its buffer -> dumpers stop).
 - Who records / who decides: MM staff record purchase orders; the manager
   reads the dashboard, chases suppliers and decides on spares and disposal.
-- Files: index.html (the page), mm.js (data and calculations), style.css,
-  config.js (empty Supabase settings, for later).
+- Files: index.html (the page), mm.js (data and calculations), sap.js (import
+  from SAP), style.css, config.js (Supabase settings), database/ (SQL).
 - Data: one shared Supabase table, mm_records (see database/01-setup.sql),
   used when config.js is filled in; otherwise each browser keeps its own copy
   (localStorage). Each row: kind (machine / spare / fitted / order / setting),
@@ -148,3 +148,13 @@
   into the shared database". Tested with a stand-in database, not the real
   one. Next: Data Keeper creates a Supabase project, runs 01-setup.sql, fills
   in config.js; then SAP import.
+- SAP import (Claude): new "SAP import" section and menu link (sap.js).
+  Reads files exported from SAP ECC / S/4HANA list reports: ME2M/ME2N
+  purchase orders, MB52/MMBE stock, MB51 consumption (201/261 issues,
+  202/262 returns). CSV, semicolon, tab-separated and SAP "unconverted" text
+  with | columns; repeated page headers and total lines are skipped. Columns
+  are matched by SAP names and can be changed by hand; a preview shows the
+  first rows. Matches by PO number + item, or by material code, so a second
+  import updates instead of doubling. Dates day.month.year; numbers
+  1,23,456.00, 1.234,56 and SAP's trailing minus. "Download a sample file"
+  gives a made-up file of each kind for practice. Next: realistic figures.

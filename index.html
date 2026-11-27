@@ -14,7 +14,7 @@
 <header class="top"><div class="wrap">
   <a class="brand" href="index.html"><i aria-hidden="true"></i>MM spares monitor</a>
   <nav class="menu" aria-label="Main menu">
-    <a href="#summary">Summary</a><a href="#machines">Machines</a><a href="#stock">Spares list</a><a href="#abc">ABC</a><a href="#spare">Spare: worth it?</a><a href="#indent">Indent warning</a><a href="#supply">Late supplies</a><a href="#suppliers">Suppliers</a>
+    <a href="#summary">Summary</a><a href="#machines">Machines</a><a href="#stock">Spares list</a><a href="#abc">ABC</a><a href="#spare">Spare: worth it?</a><a href="#indent">Indent warning</a><a href="#supply">Late supplies</a><a href="#suppliers">Suppliers</a><a href="#sap">SAP import</a>
   </nav>
 </div></header>
 
@@ -266,6 +266,41 @@
     <div class="grid3" id="supplierCards" style="margin-top:14px"></div>
   </section>
 
+  <!-- 8. IMPORT FROM SAP -->
+  <section id="sap">
+    <h2>Import from SAP</h2>
+    <p class="intro">Bring in lists exported from SAP (ECC or S/4HANA) instead of typing them. In the SAP report choose <b>List → Export → Spreadsheet</b> and save it from Excel as <b>CSV</b>, or choose <b>List → Save → File → Text with tabs</b>. Your file stays on your computer; only the rows you import go into the tool.</p>
+    <div class="grid2">
+      <div class="panel">
+        <div class="fields">
+          <label class="f">What is in the file<select id="sapType">
+            <option value="po">Purchase orders (ME2M / ME2N)</option>
+            <option value="stock">Stock (MB52 / MMBE)</option>
+            <option value="use">Consumption (MB51, issues 201 / 261)</option>
+          </select></label>
+          <label class="f">Machine for rows with no equipment number<select id="sapMachine"></select></label>
+          <label class="f wide">Choose the file (.csv or .txt)<input id="sapFile" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain"></label>
+        </div>
+        <div class="btns no-print" style="margin-top:12px"><button class="btn" type="button" id="sapSample">Download a sample file of this kind</button></div>
+        <div id="sapMap"></div>
+        <div class="btns" style="margin-top:12px"><button class="btn primary" type="button" id="sapGo" hidden>Import</button></div>
+        <p class="say" id="sapResult" aria-live="polite"></p>
+      </div>
+      <div class="panel">
+        <h3>Which SAP report gives what</h3>
+        <table class="compare">
+          <thead><tr><th>Report</th><th>Columns used</th><th>Fills</th></tr></thead>
+          <tbody>
+            <tr><td>ME2M / ME2N</td><td>Purchasing document, item, short text, supplier, plant, document date, delivery date, requisition date, GR date, net order value, tracking number (equipment)</td><td>Late supplies, Suppliers</td></tr>
+            <tr><td>MB52 / MMBE</td><td>Material, description, storage location, unrestricted stock, its value</td><td>Spares list, ABC</td></tr>
+            <tr><td>MB51</td><td>Material, movement type (201 / 261 issues, 202 / 262 returns), posting date, quantity</td><td>Use per month, last issued, dead stock</td></tr>
+          </tbody>
+        </table>
+        <p class="say muted">Import stock before consumption: consumption updates spares that are already in the list. Rows are matched by PO number and item, or by material code, so importing the same file twice updates rather than doubles. Dates are read as day.month.year (SAP India); numbers may use 1,23,456.00 or 1.234,56, and SAP's minus sign at the end (25-).</p>
+      </div>
+    </div>
+  </section>
+
   <section id="notes">
     <h2>How it is worked out</h2>
     <div class="panel notes">
@@ -293,5 +328,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="mm.js"></script>
+<script src="sap.js"></script>
 </body>
 </html>
