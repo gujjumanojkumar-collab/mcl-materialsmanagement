@@ -171,3 +171,10 @@
   mm-monitor-v2 so browsers load the new sample. Known problem: the MDP
   summary doc and slides still show the old figures. Next: real Supabase
   setup (config.js), then update the presentation figures.
+- Presentation updated (Claude): the MDP summary doc and the 12-slide deck
+  (claude.ai artifacts, not in this repository) now use the public-cost
+  figures: Rs 2.57 Cr lost to late supplies, drill bit order Rs 1.07 Cr
+  (about 11x its value), undercarriage pays back in about 91 days, A-class
+  spares 71% of spend, penalty covers about 2% of the loss. Slides also
+  mention SAP import and the shared database. Next: Data Keeper sets up
+  Supabase and sends the Project URL and publishable key for config.js.
