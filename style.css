@@ -72,6 +72,17 @@ h2{font-weight:800;letter-spacing:-.01em}
 h3{font-weight:700}
 @media (max-width:640px){.hero{background-size:1100px 117px,auto,auto}.hero .wrap{padding-bottom:120px}}
 
+/* Smaller sunrise header on the Stores and Procurement pages */
+.hero-sm .wrap{padding-block:12px 130px}
+.hero-sm h1{font-size:clamp(30px,5vw,44px);margin-bottom:6px}
+/* Links to the sections on this page */
+.secnav{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.secnav .wrap{display:flex;flex-wrap:wrap;gap:4px 6px;padding-block:6px}
+.secnav a{font-weight:600;font-size:14.5px;text-decoration:none;color:var(--ink);padding:8px 12px;border-radius:99px;min-height:40px;display:inline-flex;align-items:center}
+.secnav a:hover{background:var(--soft)}
+.menu a[aria-current="page"]{color:var(--band-ink);background:#ffffff26}
+@media (max-width:640px){.secnav{position:static}}
+
 /* Hero: headline beside the IoT drawing */
 .hero-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:12px 32px;align-items:center}
 .hero-iot{display:block;width:100%;height:auto}

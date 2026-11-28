@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MM stores</title>
+<meta name="description" content="MM stores: spares and consumables, reorder levels, ABC analysis, indent warning and import from SAP.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <a class="brand" href="index.html"><i aria-hidden="true"></i>MM spares monitor</a>
+  <nav class="menu" aria-label="Main menu">
+    <a href="index.html">Dashboard</a><a href="stores.html" aria-current="page">Stores</a><a href="procurement.html">Procurement</a>
+  </nav>
+</div></header>
+
+<div class="hero hero-sm"><div class="wrap">
+  <div class="eyebrow">Materials Management · sample data, public cost figures · as of <span id="asOf">today</span></div>
+  <h1>Stores</h1>
+  <p class="lede">Every item in the stores: what to reorder, what is locked up, which few items take most of the money, and when to raise the indent.</p>
+</div></div>
+
+<nav class="secnav no-print" aria-label="On this page"><div class="wrap"><a href="#stock">Spares list</a><a href="#abc">ABC</a><a href="#indent">Indent warning</a><a href="#sap">SAP import</a></div></nav>
+
+<main class="wrap">
+  <div id="err" role="alert"></div>
+  <div id="dbNote" class="dbnote" hidden></div>
+
+  <section id="stock">
+    <h2>Spares list</h2>
+    <p class="intro">Every item in the stores, one by one: spares, consumables (diesel, oils, filters, explosives), <b>insurance spares</b> (stand-by units for critical machines, kept even if unused) and <b>repairable</b> units (sent for repair, not bought new). <b>Reorder level</b> = daily use × (lead time + safety days): when stock plus what is already on order falls to this level, raise the indent. <b>Dead stock</b> = not issued for over a year. <b>Overstock</b> = more than reorder level plus 12 months of use.</p>
+    <div class="kpis" style="margin-top:0;margin-bottom:14px" id="stockKpis"></div>
+    <div class="btns no-print" style="margin-bottom:12px">
+      <button class="btn primary" id="addSp" type="button">+ Add a spare</button>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px">Show
+        <select id="spFilter" style="width:auto">
+          <option value="all">All spares</option><option value="reorder">Out of stock or reorder now</option><option value="locked">Dead stock or overstock</option>
+        </select>
+      </label>
+      <label class="f" style="flex:1 1 200px"><span class="sr-only">Search</span><input id="spSearch" type="search" placeholder="Search spare, code or machine"></label>
+    </div>
+    <form class="panel no-print" id="spForm" hidden style="margin-bottom:14px">
+      <h3 id="spFormTitle">Add a spare</h3>
+      <div class="fields three">
+        <label class="f wide">Spare<input name="item" type="text" required></label>
+        <label class="f">Code<input name="code" type="text"></label>
+        <label class="f">Type<select name="type"><option>Spare</option><option>Consumable</option><option>Insurance</option><option>Repairable</option></select></label>
+        <label class="f">Unit<select name="unit"><option>each</option><option>set</option><option>litre</option><option>kg</option><option>barrel</option><option>metre</option></select></label>
+        <label class="f">Purchase route<select name="route"><option>GeM</option><option>Open tender</option><option>OEM (PAC)</option><option>Rate contract</option><option>Local purchase</option><option>MARC (OEM contract)</option><option>Repair contract</option></select></label>
+        <label class="f">Keep on shelf (insurance spares)<input name="minStock" type="number" min="0" inputmode="numeric"></label>
+        <label class="f">For machine<select name="machine" id="spMachine"></select></label>
+        <label class="f">Store (location)<input name="store" type="text" required></label>
+        <label class="f">Price each (Rs)<input name="price" type="number" min="0" inputmode="numeric" required></label>
+        <label class="f">In stock (qty)<input name="stock" type="number" min="0" step="any" inputmode="decimal" required></label>
+        <label class="f">Already on order (qty)<input name="onOrder" type="number" min="0" step="any" inputmode="decimal" value="0"></label>
+        <label class="f">Used per month (qty)<input name="use" type="number" min="0" step="any" inputmode="decimal" required></label>
+        <label class="f">Lead time (days)<input name="lead" type="number" min="0" inputmode="numeric" required></label>
+        <label class="f">Safety (days)<input name="safety" type="number" min="0" inputmode="numeric" value="15"></label>
+        <label class="f">How critical<select name="critical"><option>Low</option><option>Medium</option><option>High</option></select></label>
+        <label class="f">Last issued on<input name="lastIssued" type="date"></label>
+        <label class="f">Life (working hours, if known)<input name="life" type="number" min="0" inputmode="numeric"></label>
+      </div>
+      <div class="btns" style="margin-top:14px"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" id="spCancel">Cancel</button></div>
+    </form>
+    <div class="grid3" id="spList"></div>
+  </section>
+
+  <section id="abc">
+    <h2>ABC analysis</h2>
+    <p class="intro">Spares ranked by <b>yearly spend</b> (price × use per month × 12). A few costly spares take most of the money (<b>A</b>); many others take little (<b>C</b>). Watch A items closely; keep C items simple. The grid below adds how critical each spare is, because a spare with little spend can still stop a machine.</p>
+    <div class="kpis" style="margin-top:0;margin-bottom:14px" id="abcKpis"></div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Yearly spend by spare</h3>
+        <div class="legend"><span><i style="background:var(--c1)"></i>A</span><span><i style="background:var(--c2)"></i>B</span><span><i style="background:var(--c3)"></i>C</span></div>
+        <div class="chart-box tall"><canvas id="abcChart" aria-label="Yearly spend by spare, coloured by class"></canvas></div>
+        <div class="fields" style="margin-top:12px">
+          <label class="f">A = spares making up the first … % of spend<input id="abcA" type="number" min="1" max="99" inputmode="numeric"></label>
+          <label class="f">A + B = first … % of spend (rest is C)<input id="abcB" type="number" min="2" max="100" inputmode="numeric"></label>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>The list</h3>
+        <table class="compare" id="abcTable"></table>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h3>ABC × how critical: what to do</h3>
+      <p class="muted" style="font-size:14px">Rows: class by spend. Columns: how critical the spare is (High = machine stops without it).</p>
+      <div id="abcGrid"></div>
+    </div>
+  </section>
+
+  <section id="indent">
+    <h2>Indent early warning</h2>
+    <p class="intro">Spares fitted on machines wear out. Each card works out when the part will wear out, from the hours it has run and how many hours a day its machine works. It then counts back the lead time and a safety margin to give the date to raise the indent. <span id="leadHint"></span></p>
+    <div class="btns no-print" style="margin-bottom:12px">
+      <button class="btn primary" id="addW" type="button">+ Add a fitted spare</button>
+    </div>
+    <form class="panel no-print" id="wForm" hidden style="margin-bottom:14px">
+      <h3 id="wFormTitle">Add a fitted spare</h3>
+      <div class="fields three">
+        <label class="f wide">Spare<input name="item" type="text" required></label>
+        <label class="f">On machine<select name="machine" id="wMachine"></select></label>
+        <label class="f">Life (working hours)<input name="life" type="number" min="1" inputmode="numeric" required></label>
+        <label class="f">Hours run so far<input name="run" type="number" min="0" inputmode="numeric" required></label>
+        <label class="f">Hours read on (date)<input name="readOn" type="date" required></label>
+        <label class="f">Lead time, indent to delivery (days)<input name="lead" type="number" min="0" inputmode="numeric" required></label>
+        <label class="f">Safety margin (days)<input name="safety" type="number" min="0" inputmode="numeric" value="15"></label>
+        <label class="f">Price (Rs)<input name="price" type="number" min="0" inputmode="numeric"></label>
+        <label class="f">Indent already raised?<select name="raised"><option value="no">No</option><option value="yes">Yes</option></select></label>
+      </div>
+      <div class="btns" style="margin-top:14px"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" id="wCancel">Cancel</button></div>
+    </form>
+    <div class="grid2" id="wList"></div>
+  </section>
+
+  <section id="sap">
+    <h2>Import from SAP</h2>
+    <p class="intro">Bring in lists exported from SAP (ECC or S/4HANA) instead of typing them. In the SAP report choose <b>List → Export → Spreadsheet</b> and save it from Excel as <b>CSV</b>, or choose <b>List → Save → File → Text with tabs</b>. Your file stays on your computer; only the rows you import go into the tool.</p>
+    <div class="grid2">
+      <div class="panel">
+        <div class="fields">
+          <label class="f">What is in the file<select id="sapType">
+            <option value="po">Purchase orders (ME2M / ME2N)</option>
+            <option value="stock">Stock (MB52 / MMBE)</option>
+            <option value="use">Consumption (MB51, issues 201 / 261)</option>
+          </select></label>
+          <label class="f">Machine for rows with no equipment number<select id="sapMachine"></select></label>
+          <label class="f wide">Choose the file (.csv or .txt)<input id="sapFile" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain"></label>
+        </div>
+        <div class="btns no-print" style="margin-top:12px"><button class="btn" type="button" id="sapSample">Download a sample file of this kind</button></div>
+        <div id="sapMap"></div>
+        <div class="btns" style="margin-top:12px"><button class="btn primary" type="button" id="sapGo" hidden>Import</button></div>
+        <p class="say" id="sapResult" aria-live="polite"></p>
+      </div>
+      <div class="panel">
+        <h3>Which SAP report gives what</h3>
+        <table class="compare">
+          <thead><tr><th>Report</th><th>Columns used</th><th>Fills</th></tr></thead>
+          <tbody>
+            <tr><td>ME2M / ME2N</td><td>Purchasing document, item, short text, supplier, plant, document date, delivery date, requisition date, GR date, net order value, tracking number (equipment)</td><td>Late supplies, Suppliers</td></tr>
+            <tr><td>MB52 / MMBE</td><td>Material, description, storage location, unrestricted stock, its value</td><td>Spares list, ABC</td></tr>
+            <tr><td>MB51</td><td>Material, movement type (201 / 261 issues, 202 / 262 returns), posting date, quantity</td><td>Use per month, last issued, dead stock</td></tr>
+          </tbody>
+        </table>
+        <p class="say muted">Import stock before consumption: consumption updates spares that are already in the list. Rows are matched by PO number and item, or by material code, so importing the same file twice updates rather than doubles. Dates are read as day.month.year (SAP India); numbers may use 1,23,456.00 or 1.234,56, and SAP's minus sign at the end (25-).</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap"><span>MCL team 5 · IIM Sambalpur MDP · records made up; costs from public sources</span><span id="saved">Loading…</span></div></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="mm.js"></script>
+<script src="sap.js"></script>
+</body>
+</html>

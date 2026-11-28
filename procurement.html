@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MM procurement</title>
+<meta name="description" content="MM procurement: late supplies and the domino effect on production, lead time by purchase route, and supplier scorecard.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <a class="brand" href="index.html"><i aria-hidden="true"></i>MM spares monitor</a>
+  <nav class="menu" aria-label="Main menu">
+    <a href="index.html">Dashboard</a><a href="stores.html">Stores</a><a href="procurement.html" aria-current="page">Procurement</a>
+  </nav>
+</div></header>
+
+<div class="hero hero-sm"><div class="wrap">
+  <div class="eyebrow">Materials Management · sample data, public cost figures · as of <span id="asOf">today</span></div>
+  <h1>Procurement</h1>
+  <p class="lede">What late supplies cost in lost production, how long each purchase route takes, and which suppliers deliver on time.</p>
+</div></div>
+
+<nav class="secnav no-print" aria-label="On this page"><div class="wrap"><a href="#supply">Late supplies</a><a href="#suppliers">Suppliers</a></div></nav>
+
+<main class="wrap">
+  <div id="err" role="alert"></div>
+  <div id="dbNote" class="dbnote" hidden></div>
+
+  <section id="supply">
+    <h2>Late supplies and the domino effect</h2>
+    <p class="intro">When a spare arrives after the date it was needed, the machine stands idle. Machines that depend on it stop next: no drilling means no blasted rock for the shovel after a few days, and no shovel means the dumpers have nothing to carry.</p>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Where the days go in each purchase</h3>
+        <div class="legend"><span><i style="background:var(--c1)"></i>Indent to purchase order</span><span><i style="background:var(--c2)"></i>Purchase order to delivery</span></div>
+        <div class="chart-box tall"><canvas id="cycleChart" aria-label="Days in each procurement stage per purchase order"></canvas></div>
+        <p class="muted" style="font-size:14px" id="cycleSay"></p>
+        <h3 style="margin-top:14px">Lead time by purchase route</h3>
+        <div class="scrollx"><table class="compare" id="routeTable"></table></div>
+        <p class="muted" style="font-size:14px">Orders under <b>MARC</b> (the maintenance and repair contract bought with the machine) are the maker’s responsibility: chase the maker, and apply the penalty in the MARC terms.</p>
+      </div>
+      <div class="panel">
+        <h3>How one machine stops the next</h3>
+        <p class="muted" style="font-size:14px">Change the links if your mine works differently.</p>
+        <div id="links" class="stack"></div>
+      </div>
+    </div>
+
+    <div class="btns no-print" style="margin:18px 0 10px">
+      <button class="btn primary" id="addPO" type="button">+ Add a purchase order</button>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px">Show
+        <select id="poFilter" style="width:auto">
+          <option value="all">All orders</option><option value="late">Only those that stopped a machine</option><option value="open">Only not yet received</option>
+        </select>
+      </label>
+    </div>
+
+    <form class="panel no-print" id="poForm" hidden>
+      <h3 id="poFormTitle">Add a purchase order</h3>
+      <div class="fields three">
+        <label class="f wide">Spare / item<input name="item" type="text" required></label>
+        <label class="f">For machine<select name="machine" id="poMachine"></select></label>
+        <label class="f">Location<input name="location" type="text" required></label>
+        <label class="f">Supplier<input name="supplier" type="text"></label>
+        <label class="f">Purchase route<select name="route"><option>GeM</option><option>Open tender</option><option>OEM (PAC)</option><option>Rate contract</option><option>Local purchase</option><option>MARC (OEM contract)</option><option>Repair contract</option></select></label>
+        <label class="f">Value (Rs)<input name="value" type="number" min="0" inputmode="numeric"></label>
+        <label class="f">Urgency<select name="urgency"><option>Low</option><option>Medium</option><option>High</option></select></label>
+        <label class="f">Status<select name="status"><option>Open</option><option>In progress</option><option>Resolved</option></select></label>
+        <label class="f">Indent date<input name="indent" type="date" required></label>
+        <label class="f">Purchase order date<input name="po" type="date"></label>
+        <label class="f">Promised delivery<input name="promised" type="date"></label>
+        <label class="f">Needed by (machine stops after)<input name="required" type="date"></label>
+        <label class="f">Actually delivered (blank = not yet)<input name="actual" type="date"></label>
+        <label class="f">Machines stopped waiting<input name="stopped" type="number" min="0" inputmode="numeric" value="1"></label>
+      </div>
+      <div class="btns" style="margin-top:14px"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" id="poCancel">Cancel</button></div>
+    </form>
+
+    <div class="stack" id="poList"></div>
+  </section>
+
+  <section id="suppliers">
+    <h2>Supplier scorecard</h2>
+    <p class="intro">How each supplier performs, from the purchase orders above. Only orders that have arrived, or are already past their promised date, are scored. <b>Penalty (LD)</b> is the liquidated damages the contract lets us recover for late supply.</p>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Money lost through each supplier</h3>
+        <p class="muted" style="font-size:14px">Lost production from their late supplies, including machines stopped by the domino.</p>
+        <div class="chart-box"><canvas id="supplierChart" aria-label="Money lost through each supplier"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Penalty terms (from the contract)</h3>
+        <div class="fields">
+          <label class="f">Penalty % of order value per week late<input type="number" min="0" step="0.1" inputmode="decimal" id="ldRate"></label>
+          <label class="f">Penalty cap, % of order value<input type="number" min="0" step="1" inputmode="decimal" id="ldCap"></label>
+        </div>
+        <p class="say muted" id="ldSay"></p>
+        <p class="muted" style="font-size:14px;margin-top:10px"><b>Grades:</b> <span class="pill ok">Good</span> 80% or more on time and no production lost. <span class="pill warn">Watch</span> some lateness or loss. <span class="pill bad">Poor</span> under 50% on time, or lost more than the value of their orders.</p>
+      </div>
+    </div>
+    <div class="grid3" id="supplierCards" style="margin-top:14px"></div>
+  </section>
+</main>
+
+<footer><div class="wrap"><span>MCL team 5 · IIM Sambalpur MDP · records made up; costs from public sources</span><span id="saved">Loading…</span></div></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="mm.js"></script>
+</body>
+</html>

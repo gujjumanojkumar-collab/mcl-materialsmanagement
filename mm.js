@@ -227,6 +227,7 @@ function drawChart(id, cfg) {
 }
 
 function renderSummary() {
+  if (!$('actions')) return;          // this section is on another page
   var mc = S.machines.map(function (m) { return { m: m, c: calcMachine(m) }; });
   var oc = S.orders.map(function (o) { return { o: o, r: calcOrder(o) }; });
   var fleet = mc.reduce(function (s, x) { return s + x.c.fleetProfit; }, 0);
@@ -314,6 +315,7 @@ var FIELDS = [
   ['value', 'Value of 1 unit of work (Rs)'], ['running', 'Running cost per hour (Rs)'], ['fixed', 'Fixed cost per month, each (Rs)']
 ];
 function buildMachineCards() {
+  if (!$('machineCards')) return;          // this section is on another page
   $('machineCards').innerHTML = S.machines.map(function (m, i) {
     return '<div class="panel mcard"><div class="head"><div><h3>' + esc(m.id) + ' · ' + esc(m.name) + '</h3><div class="sub">' + esc(m.work) + ' · output in ' + esc(m.unit) + '</div></div><span id="mPill' + i + '"></span></div>' +
       '<div class="fields three">' + FIELDS.map(function (f) {
@@ -322,6 +324,7 @@ function buildMachineCards() {
   }).join('');
 }
 function renderMachines() {
+  if (!$('machineCards')) return;          // this section is on another page
   S.machines.forEach(function (m, i) {
     var c = calcMachine(m);
     var label = { ok: 'Profitable', warn: 'Not covering fixed cost', bad: 'Loses money every hour' }[c.level];
@@ -343,13 +346,11 @@ function res(l, v, cls) { return '<div class="res"><div class="l">' + l + '</div
 /* ---------------- Drawing: spare calculator ---------------- */
 function buildSpare() {
   var opts = S.machines.map(function (m) { return '<option value="' + esc(m.id) + '">' + esc(m.id + ' · ' + m.name) + '</option>'; }).join('');
-  $('spareMachine').innerHTML = opts;
-  $('poMachine').innerHTML = opts;
-  $('wMachine').innerHTML = opts;
-  $('spMachine').innerHTML = opts;
+  ['spareMachine', 'poMachine', 'wMachine', 'spMachine'].forEach(function (id) { if ($(id)) $(id).innerHTML = opts; });
   document.querySelectorAll('[data-s]').forEach(function (el) { el.value = S.spare[el.dataset.s]; });
 }
 function renderSpare() {
+  if (!$('spareVerdict')) return;          // this section is on another page
   var r = calcSpare(), c = r.c, sp = S.spare, A = r.A, B = r.B;
   var box = $('spareVerdictBox'), lvl, head, why;
   if (c.marginHr <= 0) {
@@ -405,6 +406,7 @@ function renderSpare() {
 /* ---------------- Drawing: procurement ---------------- */
 var poFilter = 'all', editing = -1;
 function renderLinks() {
+  if (!$('links')) return;          // this section is on another page
   $('links').innerHTML = S.links.map(function (l, i) {
     return '<div><p style="margin-bottom:6px">If <b>' + esc(l.from) + '</b> stops, <b>' + esc(l.to) + '</b> stops too, because ' + esc(l.why) + '.</p>' +
       '<div class="fields"><label class="f">Days of work in hand (buffer)<input type="number" min="0" data-l="' + i + '" data-k="buffer" value="' + esc(l.buffer) + '"></label>' +
@@ -412,6 +414,7 @@ function renderLinks() {
   }).join('');
 }
 function renderOrders() {
+  if (!$('poList')) return;          // this section is on another page
   var oc = S.orders.map(function (o, i) { return { o: o, r: calcOrder(o), i: i }; });
   // chart: days per stage
   var col = chartColors();
@@ -532,6 +535,7 @@ function calcStock(sp) {
 }
 var spFilter = 'all', spSearch = '', spEditing = -1;
 function renderStock() {
+  if (!$('spList')) return;          // this section is on another page
   var abc = calcAbc().byIndex;
   var all = sparesList().map(function (sp, i) { return { sp: sp, r: calcStock(sp), i: i }; });
   var value = all.reduce(function (t, x) { return t + x.r.value; }, 0);
@@ -594,8 +598,10 @@ function sendToWorth(i) {
   var sp = sparesList()[i];
   S.spare.machine = sp.machine; S.spare.item = sp.item; S.spare.aPrice = num(sp.price);
   if (num(sp.life) > 0) S.spare.aLife = num(sp.life);
-  save(); buildSpare(); renderSpare();
-  $('spare').scrollIntoView({ block: 'start' });
+  save();
+  var go = function () { location.href = 'index.html#spare'; };
+  if ($('spare')) { buildSpare(); renderSpare(); $('spare').scrollIntoView({ block: 'start' }); return; }
+  if (db && dbReady) { clearTimeout(syncTimer); syncTimer = null; sync().then(go); } else go();
 }
 
 /* ---------------- ABC analysis ---------------- */
@@ -627,6 +633,7 @@ var POLICY = {
        Low: 'Buy in bulk once a year; minimum paperwork.' }
 };
 function renderAbc() {
+  if (!$('abcKpis')) return;          // this section is on another page
   var cut = abcCuts(), r = calcAbc(), col = chartColors();
   $('abcA').value = cut.a; $('abcB').value = cut.b;
   var n = r.rows.length;
@@ -694,6 +701,7 @@ function calcWear(w) {
   return r;
 }
 function renderIndent() {
+  if (!$('wList')) return;          // this section is on another page
   var rec = S.orders.map(calcOrder).filter(function (r, i) { return r.received && day(S.orders[i].indent); });
   var avg = rec.length ? S.orders.filter(function (o) { return o.actual && o.indent; }).reduce(function (t, o) { return t + diff(day(o.indent), day(o.actual)); }, 0) / rec.length : 0;
   $('leadHint').textContent = rec.length ? 'Your purchase orders so far took ' + Math.round(avg) + ' days on average from indent to delivery — use real figures like this for the lead time.' : '';
@@ -768,6 +776,7 @@ function calcSuppliers() {
 }
 var GRADE = { ok: 'Good', warn: 'Watch', bad: 'Poor', plain: 'No record yet' };
 function renderSuppliers() {
+  if (!$('supplierCards')) return;          // this section is on another page
   var list = calcSuppliers(), ld = ldTerms();
   $('ldRate').value = ld.rate; $('ldCap').value = ld.cap;
   var totLost = list.reduce(function (t, s) { return t + s.lost; }, 0), totLd = list.reduce(function (t, s) { return t + s.ld; }, 0);
@@ -913,7 +922,7 @@ async function loadFromDb() {
 function editingNow() {
   var a = document.activeElement;
   if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) return true;
-  return !$('poForm').hidden || !$('spForm').hidden || !$('wForm').hidden;
+  return ['poForm', 'spForm', 'wForm', 'bdForm'].some(function (id) { return $(id) && !$(id).hidden; });
 }
 function redraw() { buildMachineCards(); buildSpare(); renderAll(); }
 async function refreshFromDb(force) {
@@ -971,7 +980,9 @@ async function resetDb() {
 }
 
 /* ---------------- Wiring ---------------- */
+function on(id, ev, fn) { var el = $(id); if (el) el.addEventListener(ev, fn); }   // only if that part is on this page
 function renderAll() {
+  if ($('asOf')) $('asOf').textContent = today().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   try { renderMachines(); renderStock(); renderAbc(); renderSpare(); renderLinks(); renderIndent(); renderOrders(); renderSuppliers(); renderSummary(); }
   catch (e) { showError('Something went wrong while working out the figures. Please pass this message on:', e); }
 }
@@ -981,6 +992,7 @@ function start() {
   if (dbConfigured()) { S = clone(SAMPLE); redraw(); startDb(); }
   else {
     S = load(); redraw();
+    setSaved('Changes are kept in this browser only (shared database not set up yet).');
     if (window.SUPABASE_URL && !window.supabase) showError('The shared database library could not load, so this page keeps data in this browser only.', 'supabase-js did not load from cdn.jsdelivr.net');
   }
 
@@ -997,33 +1009,33 @@ function start() {
     if (e.target.id === 'spFilter') { spFilter = e.target.value; renderStock(); }
     if (e.target.id === 'poFilter') { poFilter = e.target.value; renderOrders(); }
   });
-  $('poList').addEventListener('click', function (e) {
+  on('poList', 'click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
     if (b.dataset.edit != null) { openForm(+b.dataset.edit); $('poForm').scrollIntoView({ block: 'start' }); }
     if (b.dataset.del != null && confirm('Remove "' + S.orders[+b.dataset.del].item + '"?')) { S.orders.splice(+b.dataset.del, 1); save(); renderAll(); }
   });
-  $('addPO').addEventListener('click', function () { openForm(-1); });
-  $('poCancel').addEventListener('click', function () { $('poForm').hidden = true; editing = -1; });
-  $('poForm').addEventListener('submit', saveForm);
-  $('addSp').addEventListener('click', function () { openSpForm(-1); });
-  $('spCancel').addEventListener('click', function () { $('spForm').hidden = true; spEditing = -1; });
-  $('spForm').addEventListener('submit', saveSpForm);
-  $('spSearch').addEventListener('input', function (e) { spSearch = e.target.value; renderStock(); });
-  $('spList').addEventListener('click', function (e) {
+  on('addPO', 'click', function () { openForm(-1); });
+  on('poCancel', 'click', function () { $('poForm').hidden = true; editing = -1; });
+  on('poForm', 'submit', saveForm);
+  on('addSp', 'click', function () { openSpForm(-1); });
+  on('spCancel', 'click', function () { $('spForm').hidden = true; spEditing = -1; });
+  on('spForm', 'submit', saveSpForm);
+  on('spSearch', 'input', function (e) { spSearch = e.target.value; renderStock(); });
+  on('spList', 'click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
     if (b.dataset.spworth != null) sendToWorth(+b.dataset.spworth);
     if (b.dataset.spedit != null) { openSpForm(+b.dataset.spedit); $('spForm').scrollIntoView({ block: 'start' }); }
     if (b.dataset.spdel != null && confirm('Remove "' + sparesList()[+b.dataset.spdel].item + '"?')) { sparesList().splice(+b.dataset.spdel, 1); save(); renderAll(); }
   });
-  $('addW').addEventListener('click', function () { openWForm(-1); });
-  $('wCancel').addEventListener('click', function () { $('wForm').hidden = true; wEditing = -1; });
-  $('wForm').addEventListener('submit', saveWForm);
-  $('wList').addEventListener('click', function (e) {
+  on('addW', 'click', function () { openWForm(-1); });
+  on('wCancel', 'click', function () { $('wForm').hidden = true; wEditing = -1; });
+  on('wForm', 'submit', saveWForm);
+  on('wList', 'click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
     if (b.dataset.wedit != null) { openWForm(+b.dataset.wedit); $('wForm').scrollIntoView({ block: 'start' }); }
     if (b.dataset.wdel != null && confirm('Remove "' + fittedList()[+b.dataset.wdel].item + '"?')) { fittedList().splice(+b.dataset.wdel, 1); save(); renderAll(); }
   });
-  $('reset').addEventListener('click', function () {
+  on('reset', 'click', function () {
     if (db && dbReady) { resetDb(); return; }
     if (db) return;
     if (!confirm('Put back the made-up sample figures? Your changes in this browser will be lost.')) return;

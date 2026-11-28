@@ -9,7 +9,8 @@
   time. The Progress Log at the end of this file is our handover logbook.
 
 ## What we are building
-- A tool with at most 3 pages. Today it is one page: index.html.
+- A tool with at most 3 pages: index.html (Dashboard), stores.html (Stores),
+  procurement.html (Procurement).
 - Every record has location, urgency (Low / Medium / High) and status
   (Open / In progress / Resolved), plus the columns in "Our tool" below.
 - Records are MADE UP. Costs and rates in the sample may come from PUBLIC
@@ -81,7 +82,8 @@
   domino effect (drill stops -> shovel stops after its buffer -> dumpers stop).
 - Who records / who decides: MM staff record purchase orders; the manager
   reads the dashboard, chases suppliers and decides on spares and disposal.
-- Files: index.html (the page), mm.js (data and calculations), sap.js (import
+- Files: index.html, stores.html, procurement.html (the pages), mm.js (data
+  and calculations), sap.js (import
   from SAP), style.css, config.js (Supabase settings), database/ (SQL).
 - Data: one shared Supabase table, mm_records (see database/01-setup.sql),
   used when config.js is filled in; otherwise each browser keeps its own copy
@@ -206,3 +208,10 @@
   reads the base unit of measure. GST note added: all amounts include GST
   where it applies. Storage key now mm-monitor-v3 (browsers reload the
   sample). Known problem: slides and summary doc now show older ABC figures.
+- Three pages (Claude): index.html = Dashboard (summary, machines, "Is a big
+  spare worth buying?", sources, method); stores.html = Stores (spares list,
+  ABC, indent warning, SAP import); procurement.html = Procurement (late
+  supplies, lead time by route, suppliers). Same header and menu on every
+  page (Dashboard / Stores / Procurement), plus a row of "on this page"
+  links. mm.js only draws the parts that are on the open page. "Worth it?"
+  on the Stores page opens the calculator on the Dashboard.
