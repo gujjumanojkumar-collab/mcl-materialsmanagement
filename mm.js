@@ -125,7 +125,20 @@ function qty(x) { return x >= 1e5 ? (x / 1e5).toFixed(1) + ' lakh' : int(x); }
 function day(s) { if (!s) return null; var d = new Date(s + 'T00:00:00'); return isNaN(d) ? null : d; }
 function diff(a, b) { return Math.round((b - a) / 864e5); }   // days from a to b
 function fmtDate(s) { var d = day(s); return d ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '–'; }
-function today() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+// "Figures as of": a date a viewer can fix (kept in this browser only), else today
+var AS_OF_KEY = 'mm-as-of';
+var asOfFixed = (function () { try { return localStorage.getItem(AS_OF_KEY) || ''; } catch (e) { return ''; } })();
+function realToday() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+function today() { var d = asOfFixed ? day(asOfFixed) : null; return d || realToday(); }
+function isoDay(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function setAsOf(v) {
+  asOfFixed = (v && v !== isoDay(realToday())) ? v : '';
+  try { if (asOfFixed) localStorage.setItem(AS_OF_KEY, asOfFixed); else localStorage.removeItem(AS_OF_KEY); } catch (e) {}
+  redraw();
+}
+// Share of lost production caught up later (overtime, other machines): lowers every "lost" figure
+function optsSet() { if (!S.opts) S.opts = { recover: 0 }; return S.opts; }
+function keepFactor() { return 1 - Math.min(100, Math.max(0, num(optsSet().recover))) / 100; }
 function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 
 function showError(msg, e) {
@@ -174,7 +187,7 @@ function domino(id, days, n, depth, seen) {
   if (!m || days <= 0 || n <= 0 || depth > 6 || seen[id]) return out;
   seen[id] = true;
   var c = calcMachine(m);
-  out.push({ id: id, name: m.name, days: days, n: n, lost: days * n * c.hrsDay * Math.max(0, c.marginHr),
+  out.push({ id: id, name: m.name, days: days, n: n, lost: days * n * c.hrsDay * Math.max(0, c.marginHr) * keepFactor(),
              lostQty: days * n * c.hrsDay * num(m.output), unit: m.unit, marginHr: c.marginHr, depth: depth });
   S.links.forEach(function (l) {
     if (l.from === id) out = out.concat(domino(l.to, days - num(l.buffer), num(l.idled), depth + 1, seen));
@@ -217,7 +230,7 @@ function calcSpare() {
   r.share = r.lifeValue > 0 ? A.price / r.lifeValue * 100 : Infinity;
   r.paybackHrs = c.marginHr > 0 ? A.price / c.marginHr : Infinity;
   r.paybackDays = c.hrsDay > 0 ? r.paybackHrs / c.hrsDay : Infinity;
-  r.dayWithout = c.hrsDay * Math.max(0, c.marginHr);
+  r.dayWithout = c.hrsDay * Math.max(0, c.marginHr) * keepFactor();
   return r;
 }
 
@@ -300,7 +313,7 @@ function renderSummary() {
   var lk = stk.reduce(function (t, x) { return t + x.r.locked; }, 0);
   if (lk > 0) acts.push(['warn', 'Stock', '<b>' + esc(rs(lk)) + '</b> is locked in dead stock or extra stock. Offer it to other areas or dispose of it, and stop ordering overstocked items.']);
   var bdOpen = bdList().filter(function (b) { return !b.to && SPARE_CAUSES.indexOf(b.cause) >= 0 && machine(b.machine); });
-  var perDay = bdOpen.reduce(function (t, b) { var c = calcMachine(machine(b.machine)); return t + c.hrsDay * Math.max(0, c.marginHr) * Math.max(1, num(b.count) || 1); }, 0);
+  var perDay = bdOpen.reduce(function (t, b) { var c = calcMachine(machine(b.machine)); return t + c.hrsDay * Math.max(0, c.marginHr) * Math.max(1, num(b.count) || 1) * keepFactor(); }, 0);
   if (bdOpen.length) acts.push(['bad', 'Down', '<b>' + bdOpen.length + ' breakdown' + (bdOpen.length === 1 ? '' : 's') + '</b> in the log: machines still standing idle for spares (directly or through the domino), costing about ' + esc(rs(perDay)) + ' a day.']);
   fittedList().forEach(function (w) {
     var r = calcWear(w);
@@ -792,7 +805,7 @@ function renderIndent() {
     else if (r.c.marginHr <= 0) say = esc(w.machine) + ' loses money every hour it runs. Decide whether to keep the machine before buying this spare for ' + rs(num(w.price)) + '.';
     else if (r.gap > 0) say = 'Even if you raise the indent today, it should arrive around <b>' + dstr(r.arriveIfToday) + '</b>, <b>' + r.gap + ' days after</b> the old part wears out. Expected loss: <b>' + rs(r.lost) + '</b>' + (r.chain.length > 1 ? ' including machines stopped by the domino' : '') + '. Ask for urgent supply or a rate-contract item.';
     else if (r.toRaise <= 0) say = 'Raise the indent today. It should arrive around ' + dstr(r.arriveIfToday) + ', only ' + (-r.gap) + ' days before the old part wears out.';
-    else say = 'Raise the indent by <b>' + dstr(r.raiseBy) + '</b>. Every day after that eats into the safety margin; once it is used up, each day late stops ' + esc(w.machine) + ' and costs about ' + rs(r.c.hrsDay * r.c.marginHr) + ' a day, before the domino.';
+    else say = 'Raise the indent by <b>' + dstr(r.raiseBy) + '</b>. Every day after that eats into the safety margin; once it is used up, each day late stops ' + esc(w.machine) + ' and costs about ' + rs(r.c.hrsDay * r.c.marginHr * keepFactor()) + ' a day, before the domino.';
     return '<div class="panel"><div class="mcard"><div class="head"><div><h3>' + esc(w.item) + '</h3><div class="sub">' + esc(w.machine) + (r.m ? ' · ' + esc(r.m.name) : '') + ' · ' + rs(num(w.price)) + '</div></div><span class="pill ' + r.level + '">' + esc(r.label) + '</span></div></div>' +
       (r.c ? '<div class="muted" style="font-size:14px">Life used: ' + Math.round(r.used) + '% (' + int(r.runNow) + ' of ' + int(num(w.life)) + ' h)</div><div class="lifebar ' + r.level + '"><i style="width:' + r.used.toFixed(1) + '%"></i></div>' +
       '<div class="steps"><div class="step"><div class="l">Wears out around</div><div class="v">' + (r.wearOut ? dstr(r.wearOut) : '–') + '</div><div class="l">' + (isFinite(r.daysLeft) ? 'in ' + Math.round(r.daysLeft) + ' days' : 'machine not working') + '</div></div>' +
@@ -831,7 +844,7 @@ function calcBd(b) {
   r.days = from ? Math.max(0, diff(from, to)) : 0;
   var n = Math.max(1, num(b.count) || 1);
   r.hours = num(b.hours) > 0 ? num(b.hours) : (c ? r.days * c.hrsDay * n : 0);   // working hours lost
-  r.lost = c ? r.hours * Math.max(0, c.marginHr) : 0;
+  r.lost = c ? r.hours * Math.max(0, c.marginHr) * keepFactor() : 0;
   r.spares = SPARE_CAUSES.indexOf(b.cause) >= 0;
   return r;
 }
@@ -980,7 +993,7 @@ function stateRows() {
   fittedList().forEach(function (w) { add(w, 'fitted', w.machine + ' ' + w.item, w.machine, 'Medium', w.raised === 'yes' ? 'In progress' : 'Open'); });
   S.orders.forEach(function (o) { add(o, 'order', o.id, o.location, pickOne(o.urgency, URG, 'Medium'), pickOne(o.status, STAT, 'Open')); });
   bdList().forEach(function (b) { add(b, 'breakdown', b.machine + ' ' + b.from, b.location, pickOne(b.urgency, URG, 'Medium'), pickOne(b.status, STAT, 'Open')); });
-  var sets = { spare: strip(S.spare), ld: strip(ldTerms()), abc: strip(abcCuts()), links: { list: S.links.map(strip) } };
+  var sets = { spare: strip(S.spare), ld: strip(ldTerms()), abc: strip(abcCuts()), opts: strip(optsSet()), links: { list: S.links.map(strip) } };
   Object.keys(sets).forEach(function (k) {
     out.push({ getId: function () { return settingIds[k]; }, setId: function (id) { settingIds[k] = id; },
       p: { kind: 'setting', record_key: k, location: '', urgency: 'Low', status: 'Open', data: sets[k] } });
@@ -1041,7 +1054,7 @@ async function loadFromDb() {
     if (r.kind === 'setting') {
       settingIds[r.record_key] = r.id;
       if (r.record_key === 'links') { st.links = (o.list || []); gotLinks = true; }
-      else if (r.record_key === 'spare' || r.record_key === 'ld' || r.record_key === 'abc') st[r.record_key] = o;
+      else if (r.record_key === 'spare' || r.record_key === 'ld' || r.record_key === 'abc' || r.record_key === 'opts') st[r.record_key] = o;
       return;
     }
     o._id = r.id;
@@ -1121,6 +1134,8 @@ async function resetDb() {
 function on(id, ev, fn) { var el = $(id); if (el) el.addEventListener(ev, fn); }   // only if that part is on this page
 function renderAll() {
   if ($('asOf')) $('asOf').textContent = today().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  if ($('asOfPick')) { $('asOfPick').value = isoDay(today()); $('asOfToday').hidden = !asOfFixed; }
+  if ($('recover') && document.activeElement !== $('recover')) $('recover').value = num(optsSet().recover);
   try { renderMachines(); renderStock(); renderAbc(); renderSpare(); renderLinks(); renderIndent(); renderOrders(); renderBreakdowns(); renderSuppliers(); renderSummary(); }
   catch (e) { showError('Something went wrong while working out the figures. Please pass this message on:', e); }
 }
@@ -1157,6 +1172,9 @@ function start() {
   on('poForm', 'submit', saveForm);
   on('addSp', 'click', function () { openSpForm(-1); });
   on('dlIndent', 'click', downloadIndent);
+  on('asOfPick', 'change', function (e) { if (e.target.value) setAsOf(e.target.value); });
+  on('asOfToday', 'click', function () { setAsOf(''); });
+  on('recover', 'input', function (e) { optsSet().recover = Math.min(100, Math.max(0, num(e.target.value))); save(); renderAll(); });
   on('addBd', 'click', function () { openBdForm(-1); });
   on('bdCancel', 'click', function () { $('bdForm').hidden = true; bdEditing = -1; });
   on('bdForm', 'submit', saveBdForm);

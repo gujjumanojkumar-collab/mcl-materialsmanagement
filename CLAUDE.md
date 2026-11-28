@@ -235,3 +235,12 @@
   entries, spares about 41% of downtime. DATABASE: new row kind 'breakdown'.
   If 01-setup.sql was already run, the Data Keeper must also run
   database/02-breakdown-kind.sql (one small block, safe to repeat).
+- As-of date and catch-up share (Claude): every page has "Figures as of"
+  (a date picker in the header, with "Back to today"); it fixes "today" for
+  all date sums and is kept in that browser only (localStorage mm-as-of), so
+  figures can be frozen for a meeting. Procurement page: "Share of lost
+  production caught up later (%)" (shared setting 'opts', default 0); every
+  lost-production figure on all pages is multiplied by (100% - that share).
+  Next: Data Keeper sets up Supabase (run 01-setup.sql; 02 only if 01 was run
+  earlier) and sends the Project URL and publishable key; then refresh the
+  slides and summary doc with the new figures (diesel, ABC, breakdowns).

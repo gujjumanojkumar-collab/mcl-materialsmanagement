@@ -83,6 +83,12 @@ h3{font-weight:700}
 .menu a[aria-current="page"]{color:var(--band-ink);background:#ffffff26}
 @media (max-width:640px){.secnav{position:static}}
 
+/* "Figures as of" date control in the sunrise header */
+.asof{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:8px;font-size:14px;color:#E9E1F1}
+.asof label{display:flex;align-items:center;gap:8px}
+.asof input{min-height:36px;padding:4px 8px;width:auto;background:rgba(255,255,255,.12);color:#FFF4E8;border-color:rgba(255,255,255,.3);color-scheme:dark}
+.asof-today{font:inherit;font-weight:600;color:#FFC9A3;background:none;border:1px solid rgba(255,201,163,.5);border-radius:99px;padding:5px 12px;min-height:36px;cursor:pointer}
+
 /* Hero: headline beside the IoT drawing */
 .hero-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:12px 32px;align-items:center}
 .hero-iot{display:block;width:100%;height:auto}

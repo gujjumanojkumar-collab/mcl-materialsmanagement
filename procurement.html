@@ -21,6 +21,7 @@
 
 <div class="hero hero-sm"><div class="wrap">
   <div class="eyebrow">Materials Management · sample data, public cost figures · as of <span id="asOf">today</span></div>
+  <div class="asof no-print"><label>Figures as of <input type="date" id="asOfPick"></label><button type="button" class="asof-today" id="asOfToday" hidden>Back to today</button></div>
   <h1>Procurement</h1>
   <p class="lede">What late supplies cost in lost production, how long each purchase route takes, and which suppliers deliver on time.</p>
 </div></div>
@@ -48,6 +49,8 @@
         <h3>How one machine stops the next</h3>
         <p class="muted" style="font-size:14px">Change the links if your mine works differently.</p>
         <div id="links" class="stack"></div>
+        <label class="f" style="margin-top:14px">Share of lost production caught up later (%)<input id="recover" type="number" min="0" max="100" step="5" inputmode="numeric"></label>
+        <p class="muted" style="font-size:14px;margin-top:6px">Some lost overburden or coal is made up later with overtime or other machines. Put that share here: every “lost” figure on all pages is lowered by it. 0% = lost for good.</p>
       </div>
     </div>
 
