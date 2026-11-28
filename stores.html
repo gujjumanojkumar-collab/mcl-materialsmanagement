@@ -35,8 +35,21 @@
     <h2>Spares list</h2>
     <p class="intro">Every item in the stores, one by one: spares, consumables (diesel, oils, filters, explosives), <b>insurance spares</b> (stand-by units for critical machines, kept even if unused) and <b>repairable</b> units (sent for repair, not bought new). <b>Reorder level</b> = daily use × (lead time + safety days): when stock plus what is already on order falls to this level, raise the indent. <b>Dead stock</b> = not issued for over a year. <b>Overstock</b> = more than reorder level plus 12 months of use.</p>
     <div class="kpis" style="margin-top:0;margin-bottom:14px" id="stockKpis"></div>
+    <div class="grid2" style="margin-bottom:14px">
+      <div class="panel">
+        <h3>Draft indent</h3>
+        <p class="say" id="indentDraftSay"></p>
+        <div class="btns no-print" style="margin-top:10px"><button class="btn primary" type="button" id="dlIndent">Download draft indent (Excel / CSV)</button></div>
+        <p class="muted" style="font-size:14px;margin-top:8px">Every item at or below its reorder level, missing insurance spares, units to send for repair, and fitted spares whose indent is due within 30 days. Each line has a quantity, value, purchase route and a one-line justification.</p>
+      </div>
+      <div class="panel">
+        <h3>Stores health</h3>
+        <div class="results" id="health" style="margin-top:6px;padding-top:0;border-top:0"></div>
+        <p class="muted" style="font-size:14px;margin-top:8px">Insurance spares are left out of the non-moving figures: they are meant to sit unused.</p>
+      </div>
+    </div>
     <div class="btns no-print" style="margin-bottom:12px">
-      <button class="btn primary" id="addSp" type="button">+ Add a spare</button>
+      <button class="btn" id="addSp" type="button">+ Add an item</button>
       <label class="f" style="flex-direction:row;align-items:center;gap:8px">Show
         <select id="spFilter" style="width:auto">
           <option value="all">All spares</option><option value="reorder">Out of stock or reorder now</option><option value="locked">Dead stock or overstock</option>

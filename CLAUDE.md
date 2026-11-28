@@ -215,3 +215,12 @@
   page (Dashboard / Stores / Procurement), plus a row of "on this page"
   links. mm.js only draws the parts that are on the open page. "Worth it?"
   on the Stores page opens the calculator on the Dashboard.
+- Draft indent and stores health (Claude), on the Stores page: "Download
+  draft indent (Excel / CSV)" gives one line per item at or below reorder
+  level, missing insurance spare, unit to send for repair, and fitted spare
+  whose indent is due within 30 days: code, item, type, unit, machine, store,
+  critical, ABC class, stock, on order, reorder level, suggested quantity,
+  price, value, purchase route, lead time, needed-by date, justification.
+  "Stores health": inventory held in months of use, value used per month,
+  value not issued for over 1, 2 and 5 years (insurance spares left out),
+  and items for disposal by MSTC e-auction (not issued for over 2 years).

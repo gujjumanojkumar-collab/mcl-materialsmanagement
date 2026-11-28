@@ -573,8 +573,64 @@ function renderStock() {
       res('Stock value', rs(r.value)) +
       '</div><p class="say">' + say + '</p>' +
       '<div class="btns no-print" style="margin-top:10px"><button class="btn small" type="button" data-spworth="' + x.i + '">Worth it?</button><button class="btn small" type="button" data-spedit="' + x.i + '">Edit</button><button class="btn small danger" type="button" data-spdel="' + x.i + '">Remove</button></div></div>';
-  }).join('') || '<p class="muted">No spares match.</p>';
+  }).join('') || '<p class="muted">No items match.</p>';
+  renderHealth();
   return all;
+}
+/* ---------- Stores health and the draft indent ---------- */
+function indentLines() {
+  var abc = calcAbc().byIndex, out = [], now = today();
+  sparesList().forEach(function (sp, i) {
+    var r = calcStock(sp); if (!r.reorder) return;
+    var daily = num(sp.use) / 30, runsOut = daily > 0 ? addDays(now, num(sp.stock) / daily) : null;
+    var why = r.type === 'Insurance' ? 'Insurance spare for ' + sp.machine + ': keep ' + r.rol + ' on the shelf, none in stock or on order.'
+      : r.type === 'Repairable' ? 'Repairable unit: send failed units for repair; stock ' + num(sp.stock) + ', reorder level ' + r.rol + '.'
+      : 'Stock ' + int(num(sp.stock)) + ' + on order ' + int(num(sp.onOrder)) + ' ' + unitOf(sp) + ' is at or below the reorder level of ' + int(r.rol) + '; uses ' + num(sp.use) + ' a month.';
+    if (sp.critical === 'High') why += ' Critical: ' + sp.machine + ' stops without it.';
+    out.push({ code: sp.code, item: sp.item, type: r.type, unit: unitOf(sp), machine: sp.machine, store: sp.store, critical: sp.critical, abc: abc[i],
+      stock: num(sp.stock), onOrder: num(sp.onOrder), rol: r.rol, qty: r.type === 'Repairable' ? 0 : r.orderQty, price: num(sp.price),
+      route: sp.route || '', lead: num(sp.lead) || routeLead(sp.route) || '', needBy: runsOut ? runsOut.toISOString().slice(0, 10) : '', why: why });
+  });
+  fittedList().forEach(function (w) {
+    if (w.raised === 'yes') return;
+    var r = calcWear(w); if (!r.c || r.c.marginHr <= 0 || !isFinite(r.toRaise) || r.toRaise > 30) return;
+    out.push({ code: '', item: w.item + ' (replacement for the fitted one)', type: 'Fitted spare', unit: 'each', machine: w.machine, store: '', critical: 'High', abc: '',
+      stock: '', onOrder: '', rol: '', qty: 1, price: num(w.price), route: '', lead: num(w.lead), needBy: r.wearOut ? r.wearOut.toISOString().slice(0, 10) : '',
+      why: 'Fitted part is ' + Math.round(r.used) + '% worn; wears out around ' + (r.wearOut ? dstr(r.wearOut) : '–') + '. Indent due ' + (r.toRaise <= 0 ? (-r.toRaise) + ' days ago' : 'in ' + r.toRaise + ' days') + '.' });
+  });
+  return out;
+}
+function csvCell(v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function downloadIndent() {
+  var lines = indentLines();
+  var head = ['Code', 'Item', 'Type', 'Unit', 'For machine', 'Store', 'Critical', 'ABC class', 'In stock', 'On order', 'Reorder level', 'Suggested quantity', 'Price per unit (Rs, incl. GST)', 'Value (Rs)', 'Purchase route', 'Lead time (days)', 'Needed by', 'Justification'];
+  var rows = lines.map(function (l) { return [l.code, l.item, l.type, l.unit, l.machine, l.store, l.critical, l.abc, l.stock, l.onOrder, l.rol, l.qty, l.price, Math.round(l.qty * l.price), l.route, l.lead, l.needBy, l.why]; });
+  var csv = '\uFEFF' + [head].concat(rows).map(function (r) { return r.map(csvCell).join(','); }).join('\r\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'draft-indent-' + today().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function renderHealth() {
+  if (!$('health')) return;
+  var all = sparesList().map(function (sp) { return { sp: sp, r: calcStock(sp) }; });
+  var value = all.reduce(function (t, x) { return t + x.r.value; }, 0);
+  var monthUse = all.reduce(function (t, x) { return t + x.r.monthUse; }, 0);
+  var nm = function (days) { return all.filter(function (x) { return x.r.type !== 'Insurance' && x.r.value > 0 && x.r.idleDays > days; }).reduce(function (t, x) { return t + x.r.value; }, 0); };
+  var n1 = nm(365), n2 = nm(730), n5 = nm(1825);
+  var disp = all.filter(function (x) { return x.r.type !== 'Insurance' && x.r.value > 0 && x.r.idleDays > 730; });
+  var months = monthUse > 0 ? value / monthUse : 0;
+  $('health').innerHTML =
+    res('Inventory held', months.toFixed(1) + ' months of use', months > 6 ? 'warn' : 'ok') +
+    res('Used per month (value)', rs(monthUse)) +
+    res('Not issued for over 1 year', rs(n1) + ' (' + (value ? Math.round(n1 / value * 100) : 0) + '%)', n1 > 0 ? 'warn' : 'ok') +
+    res('Not issued for over 2 years', rs(n2), n2 > 0 ? 'warn' : 'ok') +
+    res('Not issued for over 5 years', rs(n5), n5 > 0 ? 'bad' : 'ok') +
+    res('For disposal (MSTC e-auction)', disp.length + ' item' + (disp.length === 1 ? '' : 's') + ', ' + rs(disp.reduce(function (t, x) { return t + x.r.value; }, 0)), disp.length ? 'warn' : 'ok');
+  var lines = indentLines(), tot = lines.reduce(function (t, l) { return t + l.qty * l.price; }, 0);
+  var crit = lines.filter(function (l) { return l.critical === 'High'; }).length;
+  $('indentDraftSay').innerHTML = '<b>' + lines.length + ' line' + (lines.length === 1 ? '' : 's') + '</b> to indent, worth about <b>' + rs(tot) + '</b>; ' + crit + ' for critical machines.';
 }
 var SP_KEYS = ['item', 'code', 'type', 'unit', 'route', 'minStock', 'machine', 'store', 'price', 'stock', 'onOrder', 'use', 'lead', 'safety', 'critical', 'lastIssued', 'life'];
 function openSpForm(i) {
@@ -1018,6 +1074,7 @@ function start() {
   on('poCancel', 'click', function () { $('poForm').hidden = true; editing = -1; });
   on('poForm', 'submit', saveForm);
   on('addSp', 'click', function () { openSpForm(-1); });
+  on('dlIndent', 'click', downloadIndent);
   on('spCancel', 'click', function () { $('spForm').hidden = true; spEditing = -1; });
   on('spForm', 'submit', saveSpForm);
   on('spSearch', 'input', function (e) { spSearch = e.target.value; renderStock(); });
