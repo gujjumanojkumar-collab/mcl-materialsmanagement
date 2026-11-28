@@ -83,6 +83,10 @@
       <div class="fields three">
         <label class="f wide">Spare<input name="item" type="text" required></label>
         <label class="f">Code<input name="code" type="text"></label>
+        <label class="f">Type<select name="type"><option>Spare</option><option>Consumable</option><option>Insurance</option><option>Repairable</option></select></label>
+        <label class="f">Unit<select name="unit"><option>each</option><option>set</option><option>litre</option><option>kg</option><option>barrel</option><option>metre</option></select></label>
+        <label class="f">Purchase route<select name="route"><option>GeM</option><option>Open tender</option><option>OEM (PAC)</option><option>Rate contract</option><option>Local purchase</option><option>MARC (OEM contract)</option><option>Repair contract</option></select></label>
+        <label class="f">Keep on shelf (insurance spares)<input name="minStock" type="number" min="0" inputmode="numeric"></label>
         <label class="f">For machine<select name="machine" id="spMachine"></select></label>
         <label class="f">Store (location)<input name="store" type="text" required></label>
         <label class="f">Price each (Rs)<input name="price" type="number" min="0" inputmode="numeric" required></label>
@@ -209,6 +213,9 @@
         <div class="legend"><span><i style="background:var(--c1)"></i>Indent to purchase order</span><span><i style="background:var(--c2)"></i>Purchase order to delivery</span></div>
         <div class="chart-box tall"><canvas id="cycleChart" aria-label="Days in each procurement stage per purchase order"></canvas></div>
         <p class="muted" style="font-size:14px" id="cycleSay"></p>
+        <h3 style="margin-top:14px">Lead time by purchase route</h3>
+        <div class="scrollx"><table class="compare" id="routeTable"></table></div>
+        <p class="muted" style="font-size:14px">Orders under <b>MARC</b> (the maintenance and repair contract bought with the machine) are the maker’s responsibility: chase the maker, and apply the penalty in the MARC terms.</p>
       </div>
       <div class="panel">
         <h3>How one machine stops the next</h3>
@@ -233,6 +240,7 @@
         <label class="f">For machine<select name="machine" id="poMachine"></select></label>
         <label class="f">Location<input name="location" type="text" required></label>
         <label class="f">Supplier<input name="supplier" type="text"></label>
+        <label class="f">Purchase route<select name="route"><option>GeM</option><option>Open tender</option><option>OEM (PAC)</option><option>Rate contract</option><option>Local purchase</option><option>MARC (OEM contract)</option><option>Repair contract</option></select></label>
         <label class="f">Value (Rs)<input name="value" type="number" min="0" inputmode="numeric"></label>
         <label class="f">Urgency<select name="urgency"><option>Low</option><option>Medium</option><option>High</option></select></label>
         <label class="f">Status<select name="status"><option>Open</option><option>In progress</option><option>Resolved</option></select></label>
@@ -323,7 +331,8 @@
           <tr><td>Availability and utilisation in the sample</td><td>Past Coal India shovels ran at 76–84% and dumpers at 66–72% of CMPDI norms (2003–07)</td><td><a href="https://eparlib.nic.in/bitstream/123456789/540980/1/40911.pdf" target="_blank" rel="noopener">Lok Sabha answer</a></td></tr>
         </tbody>
       </table>
-      <p class="say muted">Estimates, not from a source: running costs other than diesel, lead times, stock levels, spare prices other than tyres (including the Rs 2 Cr undercarriage example) and the late-supply penalty of 0.5% a week up to 10%.</p>
+      <p class="say muted">Estimates, not from a source: running costs other than diesel, lead times and the typical lead time for each purchase route, stock levels, prices other than diesel and tyres (oils, filters, explosives, the Rs 2 Cr undercarriage example) and the late-supply penalty of 0.5% a week up to 10%.</p>
+      <p class="say muted"><b>GST:</b> all amounts in the tool include GST where it applies (the Rs 114 per BCM rate already includes it). When you import from SAP or type prices, use the same basis.</p>
     </div>
   </section>
 

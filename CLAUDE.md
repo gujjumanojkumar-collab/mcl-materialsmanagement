@@ -192,3 +192,17 @@
   figures sit on dark glass boxes so they stay readable. Fonts: Bricolage
   Grotesque for headings and numbers, DM Sans for text (Google Fonts); charts
   use DM Sans. Checked on desktop and phone, no sideways scrolling.
+- MM data upgrade (Claude): every stores item now has a type (Spare /
+  Consumable / Insurance / Repairable), a unit (each, set, litre, kg, barrel,
+  metre) and a purchase route (GeM, Open tender, OEM (PAC), Rate contract,
+  Local purchase, MARC (OEM contract), Repair contract). Insurance spares
+  keep a minimum on the shelf and are never "dead stock"; repairable items
+  say "Send for repair". Seven new sample items: HSD (Rs 88/litre, public),
+  engine oil, hydraulic oil, dumper filter kits, bulk explosive, a stand-by
+  swing motor (insurance) and an exchange hydraulic pump (repairable).
+  Purchase orders have a route; MARC orders are marked "maker's
+  responsibility" and counted on the supplier cards; a "Lead time by
+  purchase route" table sits under the procurement chart. SAP stock import
+  reads the base unit of measure. GST note added: all amounts include GST
+  where it applies. Storage key now mm-monitor-v3 (browsers reload the
+  sample). Known problem: slides and summary doc now show older ABC figures.

@@ -38,6 +38,7 @@ var TYPES = {
     ['qty', 'Unrestricted stock', ['unrestricted', 'unrestr.', 'unrestricted use', 'unrestricted stock', 'labst', 'stock']],
     ['value', 'Value of unrestricted stock (Rs)', ['value unrestricted', 'val. unrestricted', 'value unrestr.', 'stock value', 'value']],
     ['price', 'Price per unit (Rs)', ['moving price', 'moving average price', 'standard price', 'verpr', 'stprs', 'price']],
+    ['unit', 'Base unit of measure', ['base unit of measure', 'base unit', 'bun', 'meins', 'unit of measure', 'uom', 'unit']],
     ['machine', 'Equipment', ['equipment', 'equnr']]
   ] },
   use: { label: 'Consumption (MB51, issues 201 / 261)', key: 'material', fields: [
@@ -136,6 +137,18 @@ function guessMap(type, header) {
 
 /* ---------- Turning rows into records ---------- */
 function cell(r, map, k) { return map[k] == null ? '' : (r[map[k]] || '').trim(); }
+// SAP unit codes to the tool's units
+function unitFrom(u) {
+  u = String(u || '').trim().toUpperCase();
+  if (!u) return '';
+  if (['EA', 'ST', 'PC', 'PCS', 'NOS', 'NO', 'EACH'].indexOf(u) >= 0) return 'each';
+  if (['L', 'LT', 'LTR', 'KL'].indexOf(u) >= 0) return 'litre';
+  if (['KG', 'KGS'].indexOf(u) >= 0) return 'kg';
+  if (['SET', 'SETS', 'KIT'].indexOf(u) >= 0) return 'set';
+  if (['BRL', 'BBL', 'DR', 'DRUM', 'BARREL'].indexOf(u) >= 0) return 'barrel';
+  if (['M', 'MTR', 'METRE', 'METER'].indexOf(u) >= 0) return 'metre';
+  return u.toLowerCase();
+}
 function machineIds() { return MM.state().machines.map(function (m) { return m.id; }); }
 function pickMachine(v, fallback) { var ids = machineIds(); v = String(v || '').trim(); return ids.indexOf(v) >= 0 ? v : fallback; }
 
@@ -172,19 +185,20 @@ function importStock(t, map, defMachine) {
   var spares = MM.spares(), by = {}, add = 0, upd = 0, skip = [];
   t.rows.forEach(function (r, n) {
     var mat = cell(r, map, 'material').replace(/^0+(?=\d)/, ''); if (!mat) { skip.push('row ' + (n + 1) + ': no material'); return; }
-    var g = by[mat] || (by[mat] = { text: '', stores: [], qty: 0, value: 0, price: NaN, machine: '' });
+    var g = by[mat] || (by[mat] = { text: '', stores: [], qty: 0, value: 0, price: NaN, machine: '', unit: '' });
     g.text = g.text || cell(r, map, 'text');
     var st = cell(r, map, 'store'); if (st && g.stores.indexOf(st) < 0) g.stores.push(st);
     var q = parseNum(cell(r, map, 'qty')), v = parseNum(cell(r, map, 'value')), p = parseNum(cell(r, map, 'price'));
     if (!isNaN(q)) g.qty += q; if (!isNaN(v)) g.value += v; if (!isNaN(p)) g.price = p;
     g.machine = g.machine || cell(r, map, 'machine');
+    g.unit = g.unit || unitFrom(cell(r, map, 'unit'));
   });
   Object.keys(by).forEach(function (mat) {
     var g = by[mat], price = !isNaN(g.price) ? g.price : (g.qty > 0 ? g.value / g.qty : 0);
     var sp = spares.filter(function (x) { return String(x.code) === mat; })[0];
-    if (sp) { sp.stock = g.qty; if (price) sp.price = Math.round(price); if (g.stores.length) sp.store = g.stores.join(', '); if (!sp.item && g.text) sp.item = g.text; upd++; }
+    if (sp) { sp.stock = g.qty; if (g.unit) sp.unit = g.unit; if (price) sp.price = Math.round(price); if (g.stores.length) sp.store = g.stores.join(', '); if (!sp.item && g.text) sp.item = g.text; upd++; }
     else {
-      spares.push({ code: mat, item: g.text || mat, machine: pickMachine(g.machine, defMachine), store: g.stores.join(', '), price: Math.round(price),
+      spares.push({ code: mat, item: g.text || mat, type: 'Spare', unit: g.unit || 'each', route: '', machine: pickMachine(g.machine, defMachine), store: g.stores.join(', '), price: Math.round(price),
         stock: g.qty, onOrder: 0, use: 0, lead: 90, safety: 15, critical: 'Medium', lastIssued: '', life: 0 });
       add++;
     }
@@ -227,19 +241,20 @@ var SAMPLES = {
       '4500012902,10,MM-0401,DRILL BIT 250 MM TRICONE,Vendor C,East quarry,25.09.2026,25.10.2026,10.08.2026,,"3,80,000.00",DR-03\n' +
       '4500012955,10,MM-0102,DIPPER TOOTH 10 CUM SHOVEL,Vendor F,Area store East,22.07.2026,30.08.2026,10.06.2026,28.08.2026,"5,04,000.00",SH-01\n' +
       '4500013010,10,MM-0202,HYDRAULIC HOSE ASSY 1 INCH,Vendor B,Area store East,10.05.2026,15.06.2026,02.04.2026,12.06.2026,"1,44,000.00",HE-02\n',
-  stock: 'Material,Material Description,Plant,Storage Location,Unrestricted,Value Unrestricted\n' +
-      'MM-0101,TRACK SHOE ROPE SHOVEL,MCLX,Central store,6,"5,10,000.00"\n' +
-      'MM-0102,DIPPER TOOTH 10 CUM SHOVEL,MCLX,Area store East,32,"13,44,000.00"\n' +
-      'MM-0301,TYRE 27.00 R49 BIAS,MCLX,Central store,4,"10,80,000.00"\n' +
-      'MM-0601,FUEL FILTER ELEMENT 100T DUMPER,MCLX,Central store,140,"2,52,000.00"\n',
+  stock: 'Material,Material Description,Plant,Storage Location,Base Unit of Measure,Unrestricted,Value Unrestricted\n' +
+      'MM-0101,TRACK SHOE ROPE SHOVEL,MCLX,Central store,EA,6,"5,10,000.00"\n' +
+      'MM-0102,DIPPER TOOTH 10 CUM SHOVEL,MCLX,Area store East,EA,32,"13,44,000.00"\n' +
+      'MM-0301,TYRE 27.00 R49 BIAS,MCLX,Central store,EA,4,"10,80,000.00"\n' +
+      'MM-0601,HSD HIGH SPEED DIESEL,MCLX,HSD bunker,L,41500,"36,52,000.00"\n' +
+      'MM-0606,FUEL FILTER ELEMENT 100T DUMPER,MCLX,Central store,EA,140,"2,52,000.00"\n',
   use: 'Material,Material Description,Movement Type,Posting Date,Quantity\n' +
       'MM-0102,DIPPER TOOTH 10 CUM SHOVEL,261,05.06.2026,-8\n' +
       'MM-0102,DIPPER TOOTH 10 CUM SHOVEL,261,07.08.2026,-9\n' +
       'MM-0102,DIPPER TOOTH 10 CUM SHOVEL,261,12.10.2026,-7\n' +
-      'MM-0601,FUEL FILTER ELEMENT 100T DUMPER,201,20.06.2026,-30\n' +
-      'MM-0601,FUEL FILTER ELEMENT 100T DUMPER,201,18.09.2026,-36\n' +
-      'MM-0601,FUEL FILTER ELEMENT 100T DUMPER,202,19.09.2026,4\n' +
-      'MM-0601,FUEL FILTER ELEMENT 100T DUMPER,101,01.10.2026,150\n'
+      'MM-0606,FUEL FILTER ELEMENT 100T DUMPER,201,20.06.2026,-30\n' +
+      'MM-0606,FUEL FILTER ELEMENT 100T DUMPER,201,18.09.2026,-36\n' +
+      'MM-0606,FUEL FILTER ELEMENT 100T DUMPER,202,19.09.2026,4\n' +
+      'MM-0606,FUEL FILTER ELEMENT 100T DUMPER,101,01.10.2026,150\n'
 };
 
 /* ---------- The page ---------- */

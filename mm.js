@@ -6,7 +6,11 @@
 
 var HOURS_MONTH = 720;          // 30 days x 24 hours
 var INDENT_TO_PO_NORM = 60;     // days we expect from indent to purchase order (made up)
-var KEY = 'mm-monitor-v2';   // v2: sample costs from public sources
+// How an item is bought, and a typical indent-to-delivery time for that route (estimates, edit to your own)
+var ROUTES = { 'GeM': 60, 'Open tender': 150, 'OEM (PAC)': 120, 'Rate contract': 30, 'Local purchase': 10, 'MARC (OEM contract)': 45, 'Repair contract': 45 };
+var ITEM_TYPES = ['Spare', 'Consumable', 'Insurance', 'Repairable'];
+var UNITS = ['each', 'set', 'litre', 'kg', 'barrel', 'metre'];
+var KEY = 'mm-monitor-v3';   // v3: item types, units, purchase routes, consumables
 
 /* ---------------- Sample data (made up) ---------------- */
 /* Records (machine numbers, spares, orders, suppliers) are MADE UP.
@@ -40,19 +44,26 @@ var SAMPLE = {
   },
   ld: { rate: 0.5, cap: 10 },
   abc: { a: 70, b: 90 },        // ABC cut-offs, % of yearly spend
-  spares: [   // individual spares in the stores (made up)
-    { code: 'MM-0101', item: 'Track shoe', machine: 'SH-01', store: 'Central store', price: 85000, stock: 6, onOrder: 0, use: 2, lead: 120, safety: 15, critical: 'High', lastIssued: '2026-11-10', life: 12000 },
-    { code: 'MM-0102', item: 'Dipper tooth', machine: 'SH-01', store: 'Area store East', price: 42000, stock: 40, onOrder: 0, use: 8, lead: 60, safety: 15, critical: 'Medium', lastIssued: '2026-11-20', life: 0 },
-    { code: 'MM-0103', item: 'Hoist rope (set)', machine: 'SH-01', store: 'Central store', price: 1800000, stock: 0, onOrder: 0, use: 0.33, lead: 130, safety: 15, critical: 'High', lastIssued: '2026-09-28', life: 3000 },
-    { code: 'MM-0104', item: 'Undercarriage idler', machine: 'SH-01', store: 'Central store', price: 650000, stock: 1, onOrder: 0, use: 0.1, lead: 150, safety: 30, critical: 'Medium', lastIssued: '2026-04-02', life: 15000 },
-    { code: 'MM-0201', item: 'Bucket tooth', machine: 'HE-02', store: 'Area store East', price: 18000, stock: 60, onOrder: 0, use: 10, lead: 45, safety: 15, critical: 'Medium', lastIssued: '2026-11-18', life: 0 },
-    { code: 'MM-0202', item: 'Hydraulic hose', machine: 'HE-02', store: 'Area store East', price: 12000, stock: 120, onOrder: 0, use: 6, lead: 30, safety: 15, critical: 'Low', lastIssued: '2026-11-05', life: 0 },
-    { code: 'MM-0301', item: 'Tyre 27.00 R49 (bias)', machine: 'DP-07', store: 'Central store', price: 270000, stock: 4, onOrder: 6, use: 2, lead: 110, safety: 15, critical: 'High', lastIssued: '2026-10-30', life: 5000 },
-    { code: 'MM-0302', item: 'Brake disc', machine: 'DP-07', store: 'Central store', price: 140000, stock: 12, onOrder: 0, use: 1, lead: 75, safety: 15, critical: 'Medium', lastIssued: '2026-10-12', life: 0 },
-    { code: 'MM-0401', item: 'Drill bit 250 mm', machine: 'DR-03', store: 'Area store East', price: 95000, stock: 1, onOrder: 0, use: 4, lead: 60, safety: 15, critical: 'High', lastIssued: '2026-11-22', life: 400 },
-    { code: 'MM-0402', item: 'Rotary head gearbox', machine: 'DR-03', store: 'Central store', price: 2400000, stock: 0, onOrder: 0, use: 0.05, lead: 120, safety: 15, critical: 'High', lastIssued: '2025-02-14', life: 6000 },
-    { code: 'MM-0501', item: 'Engine assembly (old model)', machine: 'DP-11', store: 'Central store', price: 1500000, stock: 2, onOrder: 0, use: 0, lead: 100, safety: 15, critical: 'Low', lastIssued: '2024-08-15', life: 12000 },
-    { code: 'MM-0502', item: 'Gear pump (model discontinued)', machine: 'DP-11', store: 'Central store', price: 220000, stock: 5, onOrder: 0, use: 0, lead: 90, safety: 15, critical: 'Low', lastIssued: '2023-12-01', life: 0 }
+  spares: [   // items in the stores (made up). type: Spare / Consumable / Insurance / Repairable
+    { code: 'MM-0101', item: 'Track shoe', type: 'Spare', unit: 'each', route: 'OEM (PAC)', machine: 'SH-01', store: 'Central store', price: 85000, stock: 6, onOrder: 0, use: 2, lead: 120, safety: 15, critical: 'High', lastIssued: '2026-11-10', life: 12000 },
+    { code: 'MM-0102', item: 'Dipper tooth', type: 'Spare', unit: 'each', route: 'Rate contract', machine: 'SH-01', store: 'Area store East', price: 42000, stock: 40, onOrder: 0, use: 8, lead: 30, safety: 15, critical: 'Medium', lastIssued: '2026-11-20', life: 0 },
+    { code: 'MM-0103', item: 'Hoist rope (set)', type: 'Spare', unit: 'set', route: 'Open tender', machine: 'SH-01', store: 'Central store', price: 1800000, stock: 0, onOrder: 0, use: 0.33, lead: 130, safety: 15, critical: 'High', lastIssued: '2026-09-28', life: 3000 },
+    { code: 'MM-0104', item: 'Undercarriage idler', type: 'Spare', unit: 'each', route: 'OEM (PAC)', machine: 'SH-01', store: 'Central store', price: 650000, stock: 1, onOrder: 0, use: 0.1, lead: 150, safety: 30, critical: 'Medium', lastIssued: '2026-04-02', life: 15000 },
+    { code: 'MM-0201', item: 'Bucket tooth', type: 'Spare', unit: 'each', route: 'Rate contract', machine: 'HE-02', store: 'Area store East', price: 18000, stock: 60, onOrder: 0, use: 10, lead: 30, safety: 15, critical: 'Medium', lastIssued: '2026-11-18', life: 0 },
+    { code: 'MM-0202', item: 'Hydraulic hose', type: 'Spare', unit: 'each', route: 'GeM', machine: 'HE-02', store: 'Area store East', price: 12000, stock: 120, onOrder: 0, use: 6, lead: 30, safety: 15, critical: 'Low', lastIssued: '2026-11-05', life: 0 },
+    { code: 'MM-0203', item: 'Swing motor (stand-by unit)', type: 'Insurance', unit: 'each', route: 'MARC (OEM contract)', minStock: 1, machine: 'HE-02', store: 'Central store', price: 2600000, stock: 0, onOrder: 1, use: 0.04, lead: 120, safety: 15, critical: 'High', lastIssued: '2025-06-10', life: 15000 },
+    { code: 'MM-0204', item: 'Main hydraulic pump (exchange unit)', type: 'Repairable', unit: 'each', route: 'Repair contract', machine: 'HE-02', store: 'Central store', price: 900000, stock: 1, onOrder: 0, use: 0.25, lead: 45, safety: 15, critical: 'High', lastIssued: '2026-10-02', life: 8000 },
+    { code: 'MM-0301', item: 'Tyre 27.00 R49 (bias)', type: 'Spare', unit: 'each', route: 'GeM', machine: 'DP-07', store: 'Central store', price: 270000, stock: 4, onOrder: 6, use: 2, lead: 110, safety: 15, critical: 'High', lastIssued: '2026-10-30', life: 5000 },
+    { code: 'MM-0302', item: 'Brake disc', type: 'Spare', unit: 'each', route: 'GeM', machine: 'DP-07', store: 'Central store', price: 140000, stock: 12, onOrder: 0, use: 1, lead: 75, safety: 15, critical: 'Medium', lastIssued: '2026-10-12', life: 0 },
+    { code: 'MM-0401', item: 'Drill bit 250 mm', type: 'Consumable', unit: 'each', route: 'Rate contract', machine: 'DR-03', store: 'Area store East', price: 95000, stock: 1, onOrder: 0, use: 4, lead: 60, safety: 15, critical: 'High', lastIssued: '2026-11-22', life: 400 },
+    { code: 'MM-0402', item: 'Rotary head gearbox', type: 'Insurance', unit: 'each', route: 'OEM (PAC)', minStock: 1, machine: 'DR-03', store: 'Central store', price: 2400000, stock: 0, onOrder: 0, use: 0.05, lead: 120, safety: 15, critical: 'High', lastIssued: '2025-02-14', life: 6000 },
+    { code: 'MM-0501', item: 'Engine assembly (old model)', type: 'Spare', unit: 'each', route: 'Open tender', machine: 'DP-11', store: 'Central store', price: 1500000, stock: 2, onOrder: 0, use: 0, lead: 100, safety: 15, critical: 'Low', lastIssued: '2024-08-15', life: 12000 },
+    { code: 'MM-0502', item: 'Gear pump (model discontinued)', type: 'Spare', unit: 'each', route: 'Open tender', machine: 'DP-11', store: 'Central store', price: 220000, stock: 5, onOrder: 0, use: 0, lead: 90, safety: 15, critical: 'Low', lastIssued: '2023-12-01', life: 0 },
+    { code: 'MM-0601', item: 'HSD (diesel)', type: 'Consumable', unit: 'litre', route: 'Rate contract', machine: 'DP-07', store: 'HSD bunker', price: 88, stock: 38000, onOrder: 0, use: 64000, lead: 7, safety: 5, critical: 'High', lastIssued: '2026-11-27', life: 0 },
+    { code: 'MM-0602', item: 'Engine oil 15W-40 (210 L barrel)', type: 'Consumable', unit: 'barrel', route: 'Rate contract', machine: 'DP-07', store: 'Lube store', price: 52000, stock: 20, onOrder: 0, use: 12, lead: 30, safety: 10, critical: 'Medium', lastIssued: '2026-11-21', life: 0 },
+    { code: 'MM-0603', item: 'Hydraulic oil 68 (210 L barrel)', type: 'Consumable', unit: 'barrel', route: 'Rate contract', machine: 'HE-02', store: 'Lube store', price: 46000, stock: 6, onOrder: 0, use: 8, lead: 30, safety: 10, critical: 'Medium', lastIssued: '2026-11-19', life: 0 },
+    { code: 'MM-0604', item: 'Filter kit, 100 t dumper (fuel, oil, air)', type: 'Consumable', unit: 'set', route: 'GeM', machine: 'DP-07', store: 'Central store', price: 18000, stock: 9, onOrder: 0, use: 6, lead: 45, safety: 15, critical: 'Medium', lastIssued: '2026-11-24', life: 0 },
+    { code: 'MM-0605', item: 'Bulk explosive (site-mixed emulsion)', type: 'Consumable', unit: 'kg', route: 'Rate contract', machine: 'DR-03', store: 'Explosive magazine', price: 45, stock: 28000, onOrder: 0, use: 75000, lead: 3, safety: 4, critical: 'High', lastIssued: '2026-11-27', life: 0 }
   ],
   fitted: [   // spares now fitted on machines, for the indent early warning (made up)
     { id: 'W1', item: 'Hoist rope set', machine: 'SH-01', life: 3000, run: 800, readOn: '2026-11-25', lead: 130, safety: 15, price: 1800000, raised: 'no' },
@@ -63,19 +74,19 @@ var SAMPLE = {
     { id: 'W6', item: 'Engine (overhaul)', machine: 'DP-11', life: 12000, run: 11800, readOn: '2026-11-25', lead: 100, safety: 15, price: 1500000, raised: 'no' }
   ],   // penalty for late supply: % of order value per week, and the cap (made up)
   orders: [
-    { id: 'PO-26-014', item: 'Undercarriage assembly (track set)', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor A', value: 20000000, urgency: 'High', status: 'Resolved', indent: '2026-03-02', po: '2026-06-20', promised: '2026-09-30', required: '2026-09-15', actual: '2026-10-28', stopped: 1 },
-    { id: 'PO-26-009', item: 'Engine overhaul kit', machine: 'DP-11', location: 'Coal bench 2', supplier: 'Vendor E', value: 1500000, urgency: 'Medium', status: 'Resolved', indent: '2026-02-10', po: '2026-05-30', promised: '2026-07-15', required: '2026-07-01', actual: '2026-08-20', stopped: 1 },
-    { id: 'PO-26-021', item: 'Hoist rope set', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor B', value: 1800000, urgency: 'Low', status: 'Resolved', indent: '2026-07-01', po: '2026-08-05', promised: '2026-09-20', required: '2026-10-01', actual: '2026-09-28', stopped: 0 },
-    { id: 'PO-26-027', item: 'Drill bit and rod set', machine: 'DR-03', location: 'East quarry', supplier: 'Vendor C', value: 950000, urgency: 'High', status: 'In progress', indent: '2026-08-10', po: '2026-09-25', promised: '2026-10-25', required: '2026-11-05', actual: '', stopped: 1 },
-    { id: 'PO-26-031', item: 'Tyres 27.00 R49 (set of 6)', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor D', value: 1620000, urgency: 'High', status: 'In progress', indent: '2026-07-15', po: '2026-09-01', promised: '2026-11-10', required: '2026-11-20', actual: '', stopped: 1 },
-    { id: 'PO-26-035', item: 'Swing motor', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 2600000, urgency: 'Medium', status: 'Open', indent: '2026-09-05', po: '2026-10-20', promised: '2026-12-15', required: '2026-12-20', actual: '', stopped: 1 },
-    { id: 'PO-26-004', item: 'Bucket teeth set', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 450000, urgency: 'Low', status: 'Resolved', indent: '2026-01-20', po: '2026-03-05', promised: '2026-04-10', required: '2026-04-30', actual: '2026-04-06', stopped: 0 },
-    { id: 'PO-26-011', item: 'Hydraulic hose kit', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 320000, urgency: 'Low', status: 'Resolved', indent: '2026-04-02', po: '2026-05-10', promised: '2026-06-15', required: '2026-07-01', actual: '2026-06-12', stopped: 0 },
-    { id: 'PO-26-006', item: 'Brake discs', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor F', value: 850000, urgency: 'Medium', status: 'Resolved', indent: '2026-02-01', po: '2026-03-20', promised: '2026-05-05', required: '2026-05-20', actual: '2026-05-02', stopped: 0 },
-    { id: 'PO-26-018', item: 'Compressor filter set', machine: 'DR-03', location: 'East quarry', supplier: 'Vendor F', value: 260000, urgency: 'Low', status: 'Resolved', indent: '2026-05-12', po: '2026-06-15', promised: '2026-07-20', required: '2026-08-01', actual: '2026-07-18', stopped: 0 },
-    { id: 'PO-26-024', item: 'Dipper teeth', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor F', value: 600000, urgency: 'Medium', status: 'Resolved', indent: '2026-06-10', po: '2026-07-22', promised: '2026-08-30', required: '2026-09-10', actual: '2026-08-30', stopped: 0 },
-    { id: 'PO-26-012', item: 'Track pads (spare set)', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor A', value: 1800000, urgency: 'Medium', status: 'Resolved', indent: '2026-03-15', po: '2026-05-02', promised: '2026-07-01', required: '2026-07-20', actual: '2026-06-28', stopped: 0 },
-    { id: 'PO-26-016', item: 'Suspension cylinder', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor D', value: 1400000, urgency: 'Medium', status: 'Resolved', indent: '2026-04-10', po: '2026-05-25', promised: '2026-07-10', required: '2026-07-25', actual: '2026-07-08', stopped: 0 }
+    { id: 'PO-26-014', route: 'OEM (PAC)', item: 'Undercarriage assembly (track set)', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor A', value: 20000000, urgency: 'High', status: 'Resolved', indent: '2026-03-02', po: '2026-06-20', promised: '2026-09-30', required: '2026-09-15', actual: '2026-10-28', stopped: 1 },
+    { id: 'PO-26-009', route: 'Open tender', item: 'Engine overhaul kit', machine: 'DP-11', location: 'Coal bench 2', supplier: 'Vendor E', value: 1500000, urgency: 'Medium', status: 'Resolved', indent: '2026-02-10', po: '2026-05-30', promised: '2026-07-15', required: '2026-07-01', actual: '2026-08-20', stopped: 1 },
+    { id: 'PO-26-021', route: 'Open tender', item: 'Hoist rope set', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor B', value: 1800000, urgency: 'Low', status: 'Resolved', indent: '2026-07-01', po: '2026-08-05', promised: '2026-09-20', required: '2026-10-01', actual: '2026-09-28', stopped: 0 },
+    { id: 'PO-26-027', route: 'Rate contract', item: 'Drill bit and rod set', machine: 'DR-03', location: 'East quarry', supplier: 'Vendor C', value: 950000, urgency: 'High', status: 'In progress', indent: '2026-08-10', po: '2026-09-25', promised: '2026-10-25', required: '2026-11-05', actual: '', stopped: 1 },
+    { id: 'PO-26-031', route: 'GeM', item: 'Tyres 27.00 R49 (set of 6)', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor D', value: 1620000, urgency: 'High', status: 'In progress', indent: '2026-07-15', po: '2026-09-01', promised: '2026-11-10', required: '2026-11-20', actual: '', stopped: 1 },
+    { id: 'PO-26-035', route: 'MARC (OEM contract)', item: 'Swing motor', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 2600000, urgency: 'Medium', status: 'Open', indent: '2026-09-05', po: '2026-10-20', promised: '2026-12-15', required: '2026-12-20', actual: '', stopped: 1 },
+    { id: 'PO-26-004', route: 'Rate contract', item: 'Bucket teeth set', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 450000, urgency: 'Low', status: 'Resolved', indent: '2026-03-01', po: '2026-03-05', promised: '2026-04-10', required: '2026-04-30', actual: '2026-04-06', stopped: 0 },
+    { id: 'PO-26-011', route: 'GeM', item: 'Hydraulic hose kit', machine: 'HE-02', location: 'Coal bench 1', supplier: 'Vendor B', value: 320000, urgency: 'Low', status: 'Resolved', indent: '2026-04-02', po: '2026-05-10', promised: '2026-06-15', required: '2026-07-01', actual: '2026-06-12', stopped: 0 },
+    { id: 'PO-26-006', route: 'GeM', item: 'Brake discs', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor F', value: 850000, urgency: 'Medium', status: 'Resolved', indent: '2026-02-01', po: '2026-03-20', promised: '2026-05-05', required: '2026-05-20', actual: '2026-05-02', stopped: 0 },
+    { id: 'PO-26-018', route: 'GeM', item: 'Compressor filter set', machine: 'DR-03', location: 'East quarry', supplier: 'Vendor F', value: 260000, urgency: 'Low', status: 'Resolved', indent: '2026-05-12', po: '2026-06-15', promised: '2026-07-20', required: '2026-08-01', actual: '2026-07-18', stopped: 0 },
+    { id: 'PO-26-024', route: 'Rate contract', item: 'Dipper teeth', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor F', value: 600000, urgency: 'Medium', status: 'Resolved', indent: '2026-07-15', po: '2026-07-22', promised: '2026-08-30', required: '2026-09-10', actual: '2026-08-30', stopped: 0 },
+    { id: 'PO-26-012', route: 'MARC (OEM contract)', item: 'Track pads (spare set)', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor A', value: 1800000, urgency: 'Medium', status: 'Resolved', indent: '2026-03-15', po: '2026-05-02', promised: '2026-07-01', required: '2026-07-20', actual: '2026-06-28', stopped: 0 },
+    { id: 'PO-26-016', route: 'GeM', item: 'Suspension cylinder', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor D', value: 1400000, urgency: 'Medium', status: 'Resolved', indent: '2026-04-10', po: '2026-05-25', promised: '2026-07-10', required: '2026-07-25', actual: '2026-07-08', stopped: 0 }
   ]
 };
 
@@ -119,6 +130,9 @@ function save() {
   try { localStorage.setItem(KEY, JSON.stringify(S)); setSaved('Saved in this browser only.'); }
   catch (e) { setSaved('Could not save in this browser: ' + e.message); }
 }
+function itemType(sp) { return ITEM_TYPES.indexOf(sp.type) >= 0 ? sp.type : 'Spare'; }
+function unitOf(sp) { return sp.unit || 'each'; }
+function routeLead(r) { return ROUTES[r] != null ? ROUTES[r] : null; }
 function machine(id) { for (var i = 0; i < S.machines.length; i++) if (S.machines[i].id === id) return S.machines[i]; return null; }
 
 /* ---------------- Calculations ---------------- */
@@ -419,6 +433,19 @@ function renderOrders() {
   var placed = oc.filter(function (x) { return x.r.poPlaced; });
   var a1 = placed.length ? placed.reduce(function (s, x) { return s + x.r.indentToPO; }, 0) / placed.length : 0;
   $('cycleSay').textContent = 'Average indent to purchase order: ' + Math.round(a1) + ' days (norm ' + INDENT_TO_PO_NORM + '). Orders not yet delivered are counted up to today.';
+  if ($('routeTable')) {
+    var by = {};
+    oc.forEach(function (x) {
+      var k = x.o.route || 'Not given', g = by[k] || (by[k] = { n: 0, days: 0, got: 0, late: 0, lost: 0 });
+      g.n++; g.lost += x.r.lost; if (x.r.late > 0) g.late++;
+      if (x.r.received && day(x.o.indent)) { g.got++; g.days += diff(day(x.o.indent), day(x.o.actual)); }
+    });
+    $('routeTable').innerHTML = '<thead><tr><th>Purchase route</th><th class="n">Orders</th><th class="n">Indent to delivery (actual)</th><th class="n">Typical</th><th class="n">Late</th><th class="n">Lost</th></tr></thead><tbody>' +
+      Object.keys(by).sort(function (a, b) { return by[b].n - by[a].n; }).map(function (k) {
+        var g = by[k];
+        return '<tr><td>' + esc(k) + '</td><td class="n">' + g.n + '</td><td class="n">' + (g.got ? Math.round(g.days / g.got) + ' days' : '–') + '</td><td class="n">' + (routeLead(k) != null ? routeLead(k) + ' days' : '–') + '</td><td class="n">' + g.late + '</td><td class="n">' + rs(g.lost) + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
 
   var list = oc.filter(function (x) {
     if (poFilter === 'late') return x.r.idle > 0;
@@ -435,7 +462,7 @@ function renderOrders() {
     var outcome = r.idle > 0 ? '<b>' + r.idle + ' days idle</b>, ' + rs(r.lost) + ' lost' : r.late > 0 ? '<b>' + r.late + ' days past promised date</b>, no machine stopped yet' : r.received ? 'Arrived in time' : 'Not due yet';
     return '<div class="panel po ' + r.level + '"><div class="head"><div><h3>' + esc(o.item) + '</h3><div class="meta">' + esc(o.id) + ' · for ' + esc(o.machine) + ' · ' + esc(o.supplier) + ' · ' + rs(num(o.value)) + '</div></div>' +
       '<span class="pill ' + r.level + '">' + (r.lost > 0 ? 'Cost production' : r.level === 'warn' ? 'Late' : 'On time') + '</span></div>' +
-      '<div class="tags"><span class="pill plain">' + esc(o.location) + '</span><span class="pill ' + ({ High: 'bad', Medium: 'warn', Low: 'plain' }[o.urgency] || 'plain') + '">Urgency: ' + esc(o.urgency) + '</span><span class="pill plain">' + esc(o.status) + '</span></div>' +
+      '<div class="tags"><span class="pill plain">' + esc(o.location) + '</span>' + (o.route ? '<span class="pill ' + (o.route.indexOf('MARC') === 0 ? 'warn' : 'plain') + '">' + esc(o.route) + (o.route.indexOf('MARC') === 0 ? ': maker’s responsibility' : '') + '</span>' : '') + '<span class="pill ' + ({ High: 'bad', Medium: 'warn', Low: 'plain' }[o.urgency] || 'plain') + '">Urgency: ' + esc(o.urgency) + '</span><span class="pill plain">' + esc(o.status) + '</span></div>' +
       '<div class="steps"><div class="step"><div class="l">Indent → purchase order</div><div class="v' + (r.indentToPO > INDENT_TO_PO_NORM ? ' bad' : '') + '">' + r.indentToPO + ' days' + (r.poPlaced ? '' : ' (not placed)') + '</div></div>' +
       '<div class="step"><div class="l">Purchase order → delivery</div><div class="v">' + (r.poPlaced ? r.poToDelivery + ' days' + (r.received ? '' : ' so far') : '–') + '</div></div>' +
       '<div class="step"><div class="l">Needed by ' + fmtDate(o.required) + ' · ' + (r.received ? 'came ' + fmtDate(o.actual) : 'not yet received') + '</div><div class="v' + (r.idle > 0 ? ' bad' : '') + '">' + (r.late > 0 ? r.late + ' days late' : 'on time') + '</div></div></div>' +
@@ -445,10 +472,10 @@ function renderOrders() {
 }
 
 /* ---------------- Purchase order form ---------------- */
-var FORM_KEYS = ['item', 'machine', 'location', 'supplier', 'value', 'urgency', 'status', 'indent', 'po', 'promised', 'required', 'actual', 'stopped'];
+var FORM_KEYS = ['item', 'machine', 'location', 'supplier', 'route', 'value', 'urgency', 'status', 'indent', 'po', 'promised', 'required', 'actual', 'stopped'];
 function openForm(i) {
   editing = i;
-  var f = $('poForm'), o = i >= 0 ? S.orders[i] : { machine: S.machines[0].id, urgency: 'Medium', status: 'Open', stopped: 1, indent: new Date().toISOString().slice(0, 10) };
+  var f = $('poForm'), o = i >= 0 ? S.orders[i] : { machine: S.machines[0].id, route: 'GeM', urgency: 'Medium', status: 'Open', stopped: 1, indent: new Date().toISOString().slice(0, 10) };
   FORM_KEYS.forEach(function (k) { f.elements[k].value = o[k] == null ? '' : o[k]; });
   $('poFormTitle').textContent = i >= 0 ? 'Edit ' + S.orders[i].id : 'Add a purchase order';
   f.hidden = false; f.elements.item.focus();
@@ -467,25 +494,40 @@ function saveForm(ev) {
 /* ---------------- Spares list (stock) ---------------- */
 function sparesList() { if (!S.spares) S.spares = clone(SAMPLE.spares); return S.spares; }
 function calcStock(sp) {
-  var r = {}, daily = num(sp.use) / 30, have = num(sp.stock) + num(sp.onOrder);
+  var r = {}, t = itemType(sp), daily = num(sp.use) / 30, have = num(sp.stock) + num(sp.onOrder);
+  r.type = t;
   r.rol = Math.ceil(daily * (num(sp.lead) + num(sp.safety)) - 1e-9);
   r.cover = num(sp.use) > 0 ? num(sp.stock) / num(sp.use) : Infinity;        // months
   r.value = num(sp.stock) * num(sp.price);
+  r.monthUse = num(sp.use) * num(sp.price);                                   // value used a month
   var last = day(sp.lastIssued);
   r.idleDays = last ? diff(last, today()) : Infinity;
   r.maxNeed = r.rol + 12 * num(sp.use);
+  var crit = sp.critical === 'High';
+  if (t === 'Insurance') {
+    // Insurance spare: keep a minimum on the shelf for a critical machine. Never "dead stock".
+    var min = Math.max(1, num(sp.minStock) || 1);
+    r.rol = min; r.dead = false; r.excess = Math.max(0, num(sp.stock) - min); r.locked = r.excess * num(sp.price);
+    r.orderQty = Math.max(0, min - have);
+    if (have < min) { r.level = crit ? 'bad' : 'warn'; r.label = 'Insurance spare missing'; }
+    else if (num(sp.stock) < min) { r.level = 'plain'; r.label = 'On order'; }
+    else if (r.excess > 0) { r.level = 'warn'; r.label = 'More than needed'; }
+    else { r.level = 'ok'; r.label = 'Insurance spare in stock'; }
+    r.reorder = have < min;
+    return r;
+  }
   r.dead = num(sp.stock) > 0 && (num(sp.use) === 0 || r.idleDays > 365);
   r.excess = !r.dead && num(sp.stock) > r.maxNeed ? (num(sp.stock) - r.maxNeed) : 0;
   r.locked = r.dead ? r.value : r.excess * num(sp.price);
   r.orderQty = Math.max(0, Math.ceil(r.rol + 3 * num(sp.use) - have));
-  var crit = sp.critical === 'High';
-  if (r.dead) { r.level = 'warn'; r.label = 'Dead stock'; }
+  var low = t === 'Repairable' ? 'Send for repair' : 'Reorder now';
+  if (r.dead) { r.level = 'warn'; r.label = t === 'Consumable' ? 'Not used for a year' : 'Dead stock'; }
   else if (num(sp.stock) <= 0 && num(sp.onOrder) <= 0 && num(sp.use) > 0) { r.level = 'bad'; r.label = 'Out of stock'; }
-  else if (num(sp.use) > 0 && have <= r.rol) { r.level = crit ? 'bad' : 'warn'; r.label = 'Reorder now'; }
+  else if (num(sp.use) > 0 && have <= r.rol) { r.level = crit ? 'bad' : 'warn'; r.label = low; }
   else if (r.excess > 0) { r.level = 'warn'; r.label = 'Overstock'; }
   else if (num(sp.onOrder) > 0 && num(sp.stock) <= r.rol) { r.level = 'plain'; r.label = 'On order'; }
   else { r.level = 'ok'; r.label = 'OK'; }
-  r.reorder = r.label === 'Out of stock' || r.label === 'Reorder now';
+  r.reorder = r.label === 'Out of stock' || r.label === low;
   return r;
 }
 var spFilter = 'all', spSearch = '', spEditing = -1;
@@ -497,7 +539,7 @@ function renderStock() {
   var re = all.filter(function (x) { return x.r.reorder; });
   var reCrit = re.filter(function (x) { return x.sp.critical === 'High'; });
   $('stockKpis').innerHTML =
-    '<div class="kpi"><div class="l">Spares in the list</div><div class="v">' + all.length + '</div></div>' +
+    '<div class="kpi"><div class="l">Items in the list</div><div class="v">' + all.length + '</div></div>' +
     '<div class="kpi"><div class="l">Stock value</div><div class="v">' + rs(value) + '</div></div>' +
     '<div class="kpi"><div class="l">To reorder now (critical)</div><div class="v ' + (re.length ? 'bad' : 'ok') + '">' + re.length + ' (' + reCrit.length + ')</div></div>' +
     '<div class="kpi"><div class="l">Money locked in dead or extra stock</div><div class="v ' + (locked > 0 ? 'warn' : 'ok') + '">' + rs(locked) + '</div></div>';
@@ -505,32 +547,36 @@ function renderStock() {
   var list = all.filter(function (x) {
     if (spFilter === 'reorder' && !x.r.reorder) return false;
     if (spFilter === 'locked' && !(x.r.locked > 0)) return false;
-    return !q || (x.sp.item + ' ' + x.sp.code + ' ' + x.sp.machine + ' ' + x.sp.store).toLowerCase().indexOf(q) >= 0;
+    return !q || (x.sp.item + ' ' + x.sp.code + ' ' + x.sp.machine + ' ' + x.sp.store + ' ' + itemType(x.sp) + ' ' + (x.sp.route || '')).toLowerCase().indexOf(q) >= 0;
   }).sort(function (a, b) { return order[a.r.level] - order[b.r.level] || b.r.value - a.r.value; });
   $('spList').innerHTML = list.map(function (x) {
     var sp = x.sp, r = x.r, say;
-    if (r.label === 'Dead stock') say = 'Not issued for ' + (isFinite(r.idleDays) ? Math.round(r.idleDays / 30) + ' months' : 'a long time') + '. ' + rs(r.value) + ' locked. Offer to other areas, return to supplier, or dispose of it.';
-    else if (r.reorder) say = 'Raise the indent now for about <b>' + r.orderQty + '</b> (' + rs(r.orderQty * num(sp.price)) + ').' + (sp.critical === 'High' ? ' Critical: ' + esc(sp.machine) + ' stops without it.' : '');
-    else if (r.label === 'Overstock') say = int(r.excess) + ' more than needed: ' + rs(r.locked) + ' locked. Stop ordering until it is used down.';
+    var u = esc(unitOf(sp));
+    if (r.type === 'Insurance') say = r.reorder ? 'Keep ' + r.rol + ' on the shelf for ' + esc(sp.machine) + ': none in stock or on order. Raise the indent now (' + rs(r.orderQty * num(sp.price)) + '). A breakdown without it means waiting about ' + num(sp.lead) + ' days.'
+      : r.label === 'On order' ? 'Stand-by unit on order. Keep it on the shelf when it comes; it is not dead stock.' : 'Stand-by unit for a critical machine. It is meant to sit unused: not dead stock.';
+    else if (r.dead) say = 'Not issued for ' + (isFinite(r.idleDays) ? Math.round(r.idleDays / 30) + ' months' : 'a long time') + '. ' + rs(r.value) + ' locked. Offer to other areas, return to supplier, or put up for disposal (MSTC e-auction).';
+    else if (r.reorder && r.type === 'Repairable') say = 'Send the failed units for repair now (repair turnaround about ' + num(sp.lead) + ' days). Buy new only if the repair contract cannot meet it.';
+    else if (r.reorder) say = 'Raise the indent now for about <b>' + int(r.orderQty) + ' ' + u + '</b> (' + rs(r.orderQty * num(sp.price)) + ').' + (sp.critical === 'High' ? ' Critical: ' + esc(sp.machine) + ' stops without it.' : '');
+    else if (r.label === 'Overstock') say = int(r.excess) + ' ' + u + ' more than needed: ' + rs(r.locked) + ' locked. Stop ordering until it is used down.';
     else if (r.label === 'On order') say = num(sp.onOrder) + ' on order. Watch the delivery date under Late supplies.';
     else say = 'Enough for about ' + (isFinite(r.cover) ? r.cover.toFixed(1) + ' months' : 'a long time') + '.';
     return '<div class="panel"><div class="mcard"><div class="head"><div><h3>' + esc(sp.item) + '</h3><div class="sub">' + esc(sp.code) + ' · ' + esc(sp.machine) + ' · ' + esc(sp.store) + '</div></div><span class="pill ' + r.level + '">' + r.label + '</span></div></div>' +
-      '<div class="tags" style="margin-top:0"><span class="cls ' + abc[x.i] + '" title="ABC class">' + abc[x.i] + '</span><span class="pill ' + ({ High: 'bad', Medium: 'warn', Low: 'plain' }[sp.critical] || 'plain') + '">Critical: ' + esc(sp.critical) + '</span><span class="pill plain">' + rs(num(sp.price)) + ' each</span></div>' +
+      '<div class="tags" style="margin-top:0"><span class="cls ' + abc[x.i] + '" title="ABC class">' + abc[x.i] + '</span><span class="pill ' + ({ High: 'bad', Medium: 'warn', Low: 'plain' }[sp.critical] || 'plain') + '">Critical: ' + esc(sp.critical) + '</span><span class="pill plain">' + rs(num(sp.price)) + ' per ' + esc(unitOf(sp)) + '</span><span class="pill plain">' + esc(r.type) + '</span>' + (sp.route ? '<span class="pill plain">' + esc(sp.route) + '</span>' : '') + '</div>' +
       '<div class="results" style="margin-top:4px">' +
-      res('In stock' + (num(sp.onOrder) ? ' (+ ' + num(sp.onOrder) + ' on order)' : ''), String(num(sp.stock)), r.reorder ? 'bad' : '') +
-      res('Reorder level', String(r.rol)) +
-      res('Used per month', String(num(sp.use))) +
+      res('In stock' + (num(sp.onOrder) ? ' (+ ' + int(num(sp.onOrder)) + ' on order)' : ''), int(num(sp.stock)) + ' ' + esc(unitOf(sp)), r.reorder ? 'bad' : '') +
+      res(r.type === 'Insurance' ? 'Keep on the shelf' : 'Reorder level', int(r.rol) + ' ' + esc(unitOf(sp))) +
+      res('Used per month', (num(sp.use) < 1 && num(sp.use) > 0 ? num(sp.use) : int(num(sp.use))) + ' ' + esc(unitOf(sp))) +
       res('Stock value', rs(r.value)) +
       '</div><p class="say">' + say + '</p>' +
       '<div class="btns no-print" style="margin-top:10px"><button class="btn small" type="button" data-spworth="' + x.i + '">Worth it?</button><button class="btn small" type="button" data-spedit="' + x.i + '">Edit</button><button class="btn small danger" type="button" data-spdel="' + x.i + '">Remove</button></div></div>';
   }).join('') || '<p class="muted">No spares match.</p>';
   return all;
 }
-var SP_KEYS = ['item', 'code', 'machine', 'store', 'price', 'stock', 'onOrder', 'use', 'lead', 'safety', 'critical', 'lastIssued', 'life'];
+var SP_KEYS = ['item', 'code', 'type', 'unit', 'route', 'minStock', 'machine', 'store', 'price', 'stock', 'onOrder', 'use', 'lead', 'safety', 'critical', 'lastIssued', 'life'];
 function openSpForm(i) {
   spEditing = i;
-  var f = $('spForm'), sp = i >= 0 ? sparesList()[i] : { machine: S.machines[0].id, onOrder: 0, safety: 15, critical: 'Medium' };
-  SP_KEYS.forEach(function (k) { f.elements[k].value = sp[k] == null ? '' : sp[k]; });
+  var f = $('spForm'), sp = i >= 0 ? sparesList()[i] : { machine: S.machines[0].id, type: 'Spare', unit: 'each', route: 'GeM', minStock: 1, onOrder: 0, safety: 15, critical: 'Medium' };
+  SP_KEYS.forEach(function (k) { f.elements[k].value = sp[k] == null ? (k === 'type' ? 'Spare' : k === 'unit' ? 'each' : '') : sp[k]; });
   $('spFormTitle').textContent = i >= 0 ? 'Edit ' + sp.item : 'Add a spare';
   f.hidden = false; f.elements.item.focus();
 }
@@ -538,7 +584,8 @@ function saveSpForm(ev) {
   ev.preventDefault();
   var f = $('spForm'), sp = spEditing >= 0 ? sparesList()[spEditing] : {};
   SP_KEYS.forEach(function (k) { sp[k] = f.elements[k].value.trim(); });
-  ['price', 'stock', 'onOrder', 'use', 'lead', 'safety', 'life'].forEach(function (k) { sp[k] = num(sp[k]); });
+  ['price', 'stock', 'onOrder', 'use', 'lead', 'safety', 'life', 'minStock'].forEach(function (k) { sp[k] = num(sp[k]); });
+  if (!sp.lead && routeLead(sp.route) != null) sp.lead = routeLead(sp.route);
   if (spEditing < 0) sparesList().push(sp);
   f.hidden = true; spEditing = -1;
   save(); renderAll();
@@ -586,8 +633,8 @@ function renderAbc() {
   $('abcKpis').innerHTML = ['A', 'B', 'C'].map(function (c) {
     var g = r.rows.filter(function (x) { return x.cls === c; });
     var v = g.reduce(function (t, x) { return t + x.yearly; }, 0);
-    return '<div class="kpi"><div class="l"><span class="cls ' + c + '" style="width:22px;height:22px;font-size:12px">' + c + '</span> ' + g.length + ' spare' + (g.length === 1 ? '' : 's') + ' (' + (n ? Math.round(g.length / n * 100) : 0) + '% of items)</div><div class="v">' + rs(v) + '</div><div class="l">' + (r.total ? Math.round(v / r.total * 100) : 0) + '% of yearly spend</div></div>';
-  }).join('') + '<div class="kpi"><div class="l">Total yearly spend on these spares</div><div class="v">' + rs(r.total) + '</div></div>';
+    return '<div class="kpi"><div class="l"><span class="cls ' + c + '" style="width:22px;height:22px;font-size:12px">' + c + '</span> ' + g.length + ' item' + (g.length === 1 ? '' : 's') + ' (' + (n ? Math.round(g.length / n * 100) : 0) + '% of items)</div><div class="v">' + rs(v) + '</div><div class="l">' + (r.total ? Math.round(v / r.total * 100) : 0) + '% of yearly spend</div></div>';
+  }).join('') + '<div class="kpi"><div class="l">Total yearly spend on these items</div><div class="v">' + rs(r.total) + '</div></div>';
 
   $('abcTable').innerHTML = '<thead><tr><th>Spare</th><th class="n">Yearly spend</th><th class="n">Running total</th><th class="n">Class</th></tr></thead><tbody>' +
     r.rows.map(function (x) {
@@ -599,7 +646,7 @@ function renderAbc() {
     ['A', 'B', 'C'].map(function (k) {
       return '<div class="rh"><span class="cls ' + k + '">' + k + '</span></div>' + cols.map(function (c) {
         var g = r.rows.filter(function (x) { return x.cls === k && (x.sp.critical || 'Low') === c; });
-        return '<div class="cell' + (k === 'A' && c === 'High' && g.length ? ' hot' : '') + '" data-col="' + k + ' · Critical: ' + c + '"><b>' + g.length + '</b> spare' + (g.length === 1 ? '' : 's') + ' — ' + POLICY[k][c] +
+        return '<div class="cell' + (k === 'A' && c === 'High' && g.length ? ' hot' : '') + '" data-col="' + k + ' · Critical: ' + c + '"><b>' + g.length + '</b> item' + (g.length === 1 ? '' : 's') + ' — ' + POLICY[k][c] +
           (g.length ? '<span class="names">' + g.map(function (x) { return esc(x.sp.item); }).join(', ') + '</span>' : '') + '</div>';
       }).join('');
     }).join('') + '</div>';
@@ -695,9 +742,9 @@ function calcSuppliers() {
   var ld = ldTerms(), by = {};
   S.orders.forEach(function (o) {
     var name = (o.supplier || '').trim() || 'Supplier not entered';
-    var r = calcOrder(o), s = by[name] || (by[name] = { name: name, orders: 0, value: 0, scored: 0, onTime: 0, lateDays: 0,
+    var r = calcOrder(o), s = by[name] || (by[name] = { name: name, orders: 0, marc: 0, value: 0, scored: 0, onTime: 0, lateDays: 0,
       idle: 0, lost: 0, ld: 0, openLate: 0, worst: null });
-    s.orders++; s.value += num(o.value);
+    s.orders++; s.value += num(o.value); if ((o.route || '').indexOf('MARC') === 0) s.marc++;
     var scored = r.received || r.late > 0;           // arrived, or already past the promised date
     if (scored) {
       s.scored++; s.lateDays += r.late;
@@ -734,7 +781,7 @@ function renderSuppliers() {
     else if (s.level === 'warn') advice = 'Follow up two weeks before each promised date. Ask for a supply plan for open orders.';
     else if (s.level === 'ok') advice = 'Reliable so far. A good choice for critical spares and rate contracts.';
     else advice = 'No order has arrived or fallen due yet.';
-    return '<div class="panel"><div class="mcard"><div class="head"><div><h3>' + esc(s.name) + '</h3><div class="sub">' + s.orders + ' order' + (s.orders > 1 ? 's' : '') + ' · ' + rs(s.value) + '</div></div>' +
+    return '<div class="panel"><div class="mcard"><div class="head"><div><h3>' + esc(s.name) + '</h3><div class="sub">' + s.orders + ' order' + (s.orders > 1 ? 's' : '') + ' · ' + rs(s.value) + (s.marc ? ' · ' + s.marc + ' under MARC (maker’s responsibility)' : '') + '</div></div>' +
       '<span class="pill ' + s.level + '">' + GRADE[s.level] + '</span></div></div>' +
       '<div class="results" style="margin-top:0">' +
       res('On time', s.onTimePct == null ? '–' : Math.round(s.onTimePct) + '% <small class="muted">(' + s.onTime + ' of ' + s.scored + ')</small>', s.onTimePct == null ? '' : s.onTimePct >= 80 ? 'ok' : s.onTimePct >= 50 ? 'warn' : 'bad') +
