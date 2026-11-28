@@ -185,3 +185,10 @@
   slides now use a sunrise-over-warehouse cover and a warm dawn background
   with a warehouse skyline strip instead of dark slides (slides are a
   claude.ai artifact, not in this repository). Next: Supabase set-up.
+- Sunrise look and new fonts (Claude): the dark page header is now a sunrise
+  sky (indigo to orange) with a rising sun and images/hero-skyline.svg (an
+  original drawing of the stores yard: sawtooth warehouse with lit docks,
+  gantry crane, tyre stack, curved-roof store, forklift) along its foot. Key
+  figures sit on dark glass boxes so they stay readable. Fonts: Bricolage
+  Grotesque for headings and numbers, DM Sans for text (Google Fonts); charts
+  use DM Sans. Checked on desktop and phone, no sideways scrolling.

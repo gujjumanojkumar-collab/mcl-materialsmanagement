@@ -195,6 +195,7 @@ function chartColors() {
   return { c1: cssVar('--c1'), c2: cssVar('--c2'), neg: cssVar('--neg'), grid: cssVar('--grid'), ink: cssVar('--muted') };
 }
 function baseOpts(col) {
+  if (window.Chart && Chart.defaults && Chart.defaults.font) Chart.defaults.font.family = "'DM Sans', Arial, sans-serif";
   return {
     responsive: true, maintainAspectRatio: false, animation: false,
     interaction: { mode: 'nearest', intersect: false },
