@@ -14,8 +14,8 @@
 - Every record has location, urgency (Low / Medium / High) and status
   (Open / In progress / Resolved), plus the columns in "Our tool" below.
 - Records are MADE UP. Costs and rates in the sample may come from PUBLIC
-  sources (tenders, orders, government data), listed with links on the page
-  under "Where the figures come from". Never add real names, phone numbers,
+  sources (tenders, orders, government data), listed with links at the foot of the
+  Stores page under "Where the figures come from" (not on the Dashboard). Never add real names, phone numbers,
   employee IDs or MCL internal figures.
 
 ## Technical rules
@@ -244,3 +244,6 @@
   Next: Data Keeper sets up Supabase (run 01-setup.sql; 02 only if 01 was run
   earlier) and sends the Project URL and publishable key; then refresh the
   slides and summary doc with the new figures (diesel, ABC, breakdowns).
+- Sources moved (Claude): "Where the figures come from" is no longer shown
+  on the Dashboard; it now sits at the foot of the Stores page (with a link
+  in its "on this page" row).
