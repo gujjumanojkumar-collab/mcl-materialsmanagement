@@ -224,3 +224,14 @@
   "Stores health": inventory held in months of use, value used per month,
   value not issued for over 1, 2 and 5 years (insurance spares left out),
   and items for disposal by MSTC e-auction (not issued for over 2 years).
+- Breakdown log (Claude), on the Procurement page: entries of machines
+  standing idle (machine, how many, from, to or blank if still down, cause,
+  spare awaited, PO, hours if known, location, urgency, status) with add,
+  edit, remove. Causes: Waiting for spares, Domino: feeding machine down,
+  Mechanical repair, Electrical repair, Tyre, No operator, Other. Shows total
+  working hours lost, hours and money lost to spares (measured), and the
+  estimate from purchase orders for comparison. Open "waiting for spares"
+  entries appear in "What to do next" with the cost a day. Sample: 16 made-up
+  entries, spares about 41% of downtime. DATABASE: new row kind 'breakdown'.
+  If 01-setup.sql was already run, the Data Keeper must also run
+  database/02-breakdown-kind.sql (one small block, safe to repeat).

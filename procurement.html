@@ -25,7 +25,7 @@
   <p class="lede">What late supplies cost in lost production, how long each purchase route takes, and which suppliers deliver on time.</p>
 </div></div>
 
-<nav class="secnav no-print" aria-label="On this page"><div class="wrap"><a href="#supply">Late supplies</a><a href="#suppliers">Suppliers</a></div></nav>
+<nav class="secnav no-print" aria-label="On this page"><div class="wrap"><a href="#supply">Late supplies</a><a href="#breakdowns">Breakdown log</a><a href="#suppliers">Suppliers</a></div></nav>
 
 <main class="wrap">
   <div id="err" role="alert"></div>
@@ -82,6 +82,31 @@
     </form>
 
     <div class="stack" id="poList"></div>
+  </section>
+
+  <section id="breakdowns">
+    <h2>Breakdown log</h2>
+    <p class="intro">Machines standing idle, as recorded in the shift and breakdown registers. Entries with the cause <b>Waiting for spares</b> or <b>Domino: feeding machine down</b> give the real hours lost to supply problems, to check against the estimate worked out from purchase orders. Working hours lost = days down × the machine’s working hours a day × number of machines, unless you type the hours yourself.</p>
+    <div class="kpis" style="margin-top:0;margin-bottom:14px" id="bdKpis"></div>
+    <div class="btns no-print" style="margin-bottom:12px"><button class="btn primary" id="addBd" type="button">+ Log a breakdown</button></div>
+    <form class="panel no-print" id="bdForm" hidden style="margin-bottom:14px">
+      <h3 id="bdFormTitle">Log a breakdown</h3>
+      <div class="fields three">
+        <label class="f">Machine<select name="machine"></select></label>
+        <label class="f">How many machines<input name="count" type="number" min="1" inputmode="numeric" value="1"></label>
+        <label class="f">Cause<select name="cause"><option>Waiting for spares</option><option>Domino: feeding machine down</option><option>Mechanical repair</option><option>Electrical repair</option><option>Tyre</option><option>No operator</option><option>Other</option></select></label>
+        <label class="f">Down from<input name="from" type="date" required></label>
+        <label class="f">Back in work (blank = still down)<input name="to" type="date"></label>
+        <label class="f">Working hours lost (blank = work it out)<input name="hours" type="number" min="0" inputmode="numeric"></label>
+        <label class="f wide">Spare awaited / what happened<input name="spare" type="text"></label>
+        <label class="f">PO number<input name="po" type="text"></label>
+        <label class="f">Location<input name="location" type="text" required></label>
+        <label class="f">Urgency<select name="urgency"><option>Low</option><option>Medium</option><option>High</option></select></label>
+        <label class="f">Status<select name="status"><option>Open</option><option>In progress</option><option>Resolved</option></select></label>
+      </div>
+      <div class="btns" style="margin-top:14px"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" id="bdCancel">Cancel</button></div>
+    </form>
+    <div class="grid2" id="bdList"></div>
   </section>
 
   <section id="suppliers">

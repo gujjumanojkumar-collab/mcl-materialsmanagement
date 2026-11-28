@@ -87,6 +87,24 @@ var SAMPLE = {
     { id: 'PO-26-024', route: 'Rate contract', item: 'Dipper teeth', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor F', value: 600000, urgency: 'Medium', status: 'Resolved', indent: '2026-07-15', po: '2026-07-22', promised: '2026-08-30', required: '2026-09-10', actual: '2026-08-30', stopped: 0 },
     { id: 'PO-26-012', route: 'MARC (OEM contract)', item: 'Track pads (spare set)', machine: 'SH-01', location: 'East quarry', supplier: 'Vendor A', value: 1800000, urgency: 'Medium', status: 'Resolved', indent: '2026-03-15', po: '2026-05-02', promised: '2026-07-01', required: '2026-07-20', actual: '2026-06-28', stopped: 0 },
     { id: 'PO-26-016', route: 'GeM', item: 'Suspension cylinder', machine: 'DP-07', location: 'Haul road 3', supplier: 'Vendor D', value: 1400000, urgency: 'Medium', status: 'Resolved', indent: '2026-04-10', po: '2026-05-25', promised: '2026-07-10', required: '2026-07-25', actual: '2026-07-08', stopped: 0 }
+  ],
+  breakdowns: [   // machines standing idle, from the shift / breakdown log (made up). to = '' means still down
+    { id: 'BD-01', machine: 'SH-01', count: 1, from: '2026-09-15', to: '2026-10-28', cause: 'Waiting for spares', spare: 'Undercarriage assembly (track set)', po: 'PO-26-014', hours: '', location: 'East quarry', urgency: 'High', status: 'Resolved' },
+    { id: 'BD-02', machine: 'DP-07', count: 4, from: '2026-09-15', to: '2026-10-28', cause: 'Domino: feeding machine down', spare: 'Shovel SH-01 down (undercarriage)', po: 'PO-26-014', hours: '', location: 'East quarry', urgency: 'High', status: 'Resolved' },
+    { id: 'BD-03', machine: 'DR-03', count: 1, from: '2026-11-05', to: '', cause: 'Waiting for spares', spare: 'Drill bit and rod set', po: 'PO-26-027', hours: '', location: 'East quarry', urgency: 'High', status: 'In progress' },
+    { id: 'BD-04', machine: 'SH-01', count: 1, from: '2026-11-09', to: '', cause: 'Domino: feeding machine down', spare: 'No blasted rock (drill DR-03 down)', po: 'PO-26-027', hours: '', location: 'East quarry', urgency: 'High', status: 'In progress' },
+    { id: 'BD-05', machine: 'DP-07', count: 1, from: '2026-11-20', to: '', cause: 'Waiting for spares', spare: 'Tyres 27.00 R49', po: 'PO-26-031', hours: '', location: 'Haul road 3', urgency: 'High', status: 'In progress' },
+    { id: 'BD-06', machine: 'HE-02', count: 1, from: '2026-10-14', to: '2026-10-16', cause: 'Mechanical repair', spare: 'Hydraulic hose burst, replaced from stock', po: '', hours: '', location: 'Coal bench 1', urgency: 'Medium', status: 'Resolved' },
+    { id: 'BD-07', machine: 'DP-11', count: 1, from: '2026-07-01', to: '2026-08-20', cause: 'Waiting for spares', spare: 'Engine overhaul kit', po: 'PO-26-009', hours: '', location: 'Coal bench 2', urgency: 'Medium', status: 'Resolved' },
+    { id: 'BD-08', machine: 'DP-07', count: 1, from: '2026-11-02', to: '2026-11-03', cause: 'Tyre', spare: 'Tyre cut, replaced from stock', po: '', hours: '', location: 'Haul road 3', urgency: 'Low', status: 'Resolved' },
+    { id: 'BD-09', machine: 'SH-01', count: 1, from: '2026-08-11', to: '2026-08-12', cause: 'Electrical repair', spare: 'Trailing cable joint', po: '', hours: '', location: 'East quarry', urgency: 'Medium', status: 'Resolved' },
+    { id: 'BD-10', machine: 'DP-07', count: 6, from: '2026-08-01', to: '2026-11-27', cause: 'Mechanical repair', spare: 'Total from the shift log: engine, transmission, suspension jobs', po: '', hours: 1650, location: 'Workshop', urgency: 'Medium', status: 'Resolved' },
+    { id: 'BD-11', machine: 'DP-07', count: 6, from: '2026-08-01', to: '2026-11-27', cause: 'Tyre', spare: 'Total from the shift log: cuts and punctures', po: '', hours: 380, location: 'Haul road 3', urgency: 'Low', status: 'Resolved' },
+    { id: 'BD-12', machine: 'DP-07', count: 6, from: '2026-08-01', to: '2026-11-27', cause: 'No operator', spare: 'Total from the shift log: shifts without an operator', po: '', hours: 640, location: 'East quarry', urgency: 'Medium', status: 'Resolved' },
+    { id: 'BD-13', machine: 'SH-01', count: 1, from: '2026-08-01', to: '2026-11-27', cause: 'Electrical repair', spare: 'Total from the shift log: cables, motors, controls', po: '', hours: 210, location: 'East quarry', urgency: 'Medium', status: 'Resolved' },
+    { id: 'BD-14', machine: 'HE-02', count: 1, from: '2026-08-01', to: '2026-11-27', cause: 'Mechanical repair', spare: 'Total from the shift log: hoses, pins and bushes', po: '', hours: 290, location: 'Coal bench 1', urgency: 'Medium', status: 'Resolved' },
+    { id: 'BD-15', machine: 'DR-03', count: 1, from: '2026-08-01', to: '2026-11-04', cause: 'Mechanical repair', spare: 'Total from the shift log: compressor and rotary head', po: '', hours: 240, location: 'East quarry', urgency: 'Medium', status: 'Resolved' },
+    { id: 'BD-16', machine: 'DP-11', count: 1, from: '2026-08-21', to: '2026-11-27', cause: 'Mechanical repair', spare: 'Total from the shift log: old machine, frequent failures', po: '', hours: 620, location: 'Coal bench 2', urgency: 'Low', status: 'Resolved' }
   ]
 };
 
@@ -281,6 +299,9 @@ function renderSummary() {
   if (crit.length) acts.push(['bad', 'Stock', 'Reorder now — critical spares at or below reorder level: <b>' + crit.map(function (x) { return esc(x.sp.item) + ' (' + esc(x.sp.machine) + ')'; }).join(', ') + '</b>.']);
   var lk = stk.reduce(function (t, x) { return t + x.r.locked; }, 0);
   if (lk > 0) acts.push(['warn', 'Stock', '<b>' + esc(rs(lk)) + '</b> is locked in dead stock or extra stock. Offer it to other areas or dispose of it, and stop ordering overstocked items.']);
+  var bdOpen = bdList().filter(function (b) { return !b.to && SPARE_CAUSES.indexOf(b.cause) >= 0 && machine(b.machine); });
+  var perDay = bdOpen.reduce(function (t, b) { var c = calcMachine(machine(b.machine)); return t + c.hrsDay * Math.max(0, c.marginHr) * Math.max(1, num(b.count) || 1); }, 0);
+  if (bdOpen.length) acts.push(['bad', 'Down', '<b>' + bdOpen.length + ' breakdown' + (bdOpen.length === 1 ? '' : 's') + '</b> in the log: machines still standing idle for spares (directly or through the domino), costing about ' + esc(rs(perDay)) + ' a day.']);
   fittedList().forEach(function (w) {
     var r = calcWear(w);
     if (r.level === 'bad') acts.push(['bad', 'Indent', 'Raise the indent now for <b>' + esc(w.item) + '</b> (' + esc(w.machine) + ').' + (r.gap > 0 ? ' Even today it would arrive ' + r.gap + ' days after the old part wears out — about ' + esc(rs(r.lost)) + ' at risk.' : '')]);
@@ -800,6 +821,65 @@ function saveWForm(ev) {
   save(); renderAll();
 }
 
+/* ---------------- Breakdown log ---------------- */
+var CAUSES = ['Waiting for spares', 'Domino: feeding machine down', 'Mechanical repair', 'Electrical repair', 'Tyre', 'No operator', 'Other'];
+var SPARE_CAUSES = ['Waiting for spares', 'Domino: feeding machine down'];
+function bdList() { if (!S.breakdowns) S.breakdowns = clone(SAMPLE.breakdowns); return S.breakdowns; }
+function calcBd(b) {
+  var m = machine(b.machine), c = m ? calcMachine(m) : null, from = day(b.from), to = day(b.to) || today();
+  var r = { m: m, c: c, open: !b.to };
+  r.days = from ? Math.max(0, diff(from, to)) : 0;
+  var n = Math.max(1, num(b.count) || 1);
+  r.hours = num(b.hours) > 0 ? num(b.hours) : (c ? r.days * c.hrsDay * n : 0);   // working hours lost
+  r.lost = c ? r.hours * Math.max(0, c.marginHr) : 0;
+  r.spares = SPARE_CAUSES.indexOf(b.cause) >= 0;
+  return r;
+}
+var bdEditing = -1;
+function renderBreakdowns() {
+  if (!$('bdList')) return;
+  var all = bdList().map(function (b, i) { return { b: b, r: calcBd(b), i: i }; });
+  var tot = all.reduce(function (t, x) { return t + x.r.hours; }, 0);
+  var sp = all.filter(function (x) { return x.r.spares; });
+  var spHrs = sp.reduce(function (t, x) { return t + x.r.hours; }, 0), spLost = sp.reduce(function (t, x) { return t + x.r.lost; }, 0);
+  var est = S.orders.reduce(function (t, o) { return t + calcOrder(o).lost; }, 0);
+  $('bdKpis').innerHTML =
+    '<div class="kpi"><div class="l">Working hours lost, all causes</div><div class="v">' + int(tot) + ' h</div></div>' +
+    '<div class="kpi"><div class="l">Lost waiting for spares (incl. domino)</div><div class="v bad">' + int(spHrs) + ' h · ' + (tot ? Math.round(spHrs / tot * 100) : 0) + '%</div></div>' +
+    '<div class="kpi"><div class="l">Money lost waiting for spares (measured)</div><div class="v bad">' + rs(spLost) + '</div></div>' +
+    '<div class="kpi"><div class="l">Estimated from purchase orders</div><div class="v">' + rs(est) + '</div></div>';
+  all.sort(function (a, b) { return (a.r.open === b.r.open ? 0 : a.r.open ? -1 : 1) || String(b.b.from).localeCompare(String(a.b.from)); });
+  $('bdList').innerHTML = all.map(function (x) {
+    var b = x.b, r = x.r, lvl = r.open ? 'bad' : r.spares ? 'warn' : 'plain';
+    return '<div class="panel po ' + (r.open ? 'bad' : r.spares ? 'warn' : 'ok') + '"><div class="head"><div><h3>' + esc(b.machine) + (num(b.count) > 1 ? ' ×' + num(b.count) : '') + ' · ' + esc(b.cause) + '</h3>' +
+      '<div class="meta">' + fmtDate(b.from) + ' to ' + (b.to ? fmtDate(b.to) : 'today (still down)') + (b.spare ? ' · ' + esc(b.spare) : '') + (b.po ? ' · ' + esc(b.po) : '') + '</div></div>' +
+      '<span class="pill ' + lvl + '">' + (r.open ? 'Still down' : esc(b.status || 'Resolved')) + '</span></div>' +
+      '<div class="steps"><div class="step"><div class="l">Days down</div><div class="v">' + r.days + '</div></div>' +
+      '<div class="step"><div class="l">Working hours lost</div><div class="v">' + int(r.hours) + ' h</div></div>' +
+      '<div class="step"><div class="l">Earnings lost</div><div class="v' + (r.lost > 0 ? ' bad' : '') + '">' + (r.c && r.c.marginHr <= 0 ? 'none (machine loses money)' : rs(r.lost)) + '</div></div></div>' +
+      '<div class="btns no-print"><button class="btn small" type="button" data-bdedit="' + x.i + '">Edit</button><button class="btn small danger" type="button" data-bddel="' + x.i + '">Remove</button></div></div>';
+  }).join('') || '<p class="muted">No breakdowns logged yet.</p>';
+}
+var BD_KEYS = ['machine', 'count', 'from', 'to', 'cause', 'spare', 'po', 'hours', 'location', 'urgency', 'status'];
+function openBdForm(i) {
+  bdEditing = i;
+  var f = $('bdForm'), b = i >= 0 ? bdList()[i] : { machine: S.machines[0].id, count: 1, from: today().toISOString().slice(0, 10), cause: 'Waiting for spares', urgency: 'High', status: 'Open' };
+  f.elements.machine.innerHTML = S.machines.map(function (m) { return '<option value="' + esc(m.id) + '">' + esc(m.id + ' · ' + m.name) + '</option>'; }).join('');
+  BD_KEYS.forEach(function (k) { f.elements[k].value = b[k] == null ? '' : b[k]; });
+  $('bdFormTitle').textContent = i >= 0 ? 'Edit breakdown' : 'Log a breakdown';
+  f.hidden = false; f.elements.machine.focus();
+}
+function saveBdForm(ev) {
+  ev.preventDefault();
+  var f = $('bdForm'), b = bdEditing >= 0 ? bdList()[bdEditing] : {};
+  BD_KEYS.forEach(function (k) { b[k] = f.elements[k].value.trim(); });
+  b.count = Math.max(1, num(b.count) || 1);
+  if (b.to && b.status !== 'Resolved') b.status = 'Resolved';
+  if (bdEditing < 0) { b.id = 'BD-' + Date.now().toString().slice(-6); bdList().push(b); }
+  f.hidden = true; bdEditing = -1;
+  save(); renderAll();
+}
+
 /* ---------------- Supplier scorecard ---------------- */
 function ldTerms() { if (!S.ld) S.ld = clone(SAMPLE.ld); return S.ld; }
 function calcSuppliers() {
@@ -899,6 +979,7 @@ function stateRows() {
   sparesList().forEach(function (sp) { add(sp, 'spare', sp.code || sp.item, sp.store, pickOne(sp.critical, URG, 'Medium'), 'Open'); });
   fittedList().forEach(function (w) { add(w, 'fitted', w.machine + ' ' + w.item, w.machine, 'Medium', w.raised === 'yes' ? 'In progress' : 'Open'); });
   S.orders.forEach(function (o) { add(o, 'order', o.id, o.location, pickOne(o.urgency, URG, 'Medium'), pickOne(o.status, STAT, 'Open')); });
+  bdList().forEach(function (b) { add(b, 'breakdown', b.machine + ' ' + b.from, b.location, pickOne(b.urgency, URG, 'Medium'), pickOne(b.status, STAT, 'Open')); });
   var sets = { spare: strip(S.spare), ld: strip(ldTerms()), abc: strip(abcCuts()), links: { list: S.links.map(strip) } };
   Object.keys(sets).forEach(function (k) {
     out.push({ getId: function () { return settingIds[k]; }, setId: function (id) { settingIds[k] = id; },
@@ -951,7 +1032,7 @@ async function sync() {
 async function loadFromDb() {
   var res = await db.from(TABLE).select('*').eq('hidden', false).order('created_at', { ascending: true });
   if (res.error) throw res.error;
-  var st = { machines: [], spares: [], fitted: [], orders: [], links: [] };
+  var st = { machines: [], spares: [], fitted: [], orders: [], breakdowns: [], links: [] };
   known = {}; synced = {}; settingIds = {};
   var gotLinks = false;
   res.data.forEach(function (r) {
@@ -968,6 +1049,7 @@ async function loadFromDb() {
     else if (r.kind === 'spare') st.spares.push(o);
     else if (r.kind === 'fitted') st.fitted.push(o);
     else if (r.kind === 'order') st.orders.push(o);
+    else if (r.kind === 'breakdown') st.breakdowns.push(o);
   });
   st.empty = !st.machines.length && !st.orders.length && !st.spares.length && !st.fitted.length;
   if (!st.spare) st.spare = clone(SAMPLE.spare);
@@ -1039,7 +1121,7 @@ async function resetDb() {
 function on(id, ev, fn) { var el = $(id); if (el) el.addEventListener(ev, fn); }   // only if that part is on this page
 function renderAll() {
   if ($('asOf')) $('asOf').textContent = today().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  try { renderMachines(); renderStock(); renderAbc(); renderSpare(); renderLinks(); renderIndent(); renderOrders(); renderSuppliers(); renderSummary(); }
+  try { renderMachines(); renderStock(); renderAbc(); renderSpare(); renderLinks(); renderIndent(); renderOrders(); renderBreakdowns(); renderSuppliers(); renderSummary(); }
   catch (e) { showError('Something went wrong while working out the figures. Please pass this message on:', e); }
 }
 
@@ -1075,6 +1157,14 @@ function start() {
   on('poForm', 'submit', saveForm);
   on('addSp', 'click', function () { openSpForm(-1); });
   on('dlIndent', 'click', downloadIndent);
+  on('addBd', 'click', function () { openBdForm(-1); });
+  on('bdCancel', 'click', function () { $('bdForm').hidden = true; bdEditing = -1; });
+  on('bdForm', 'submit', saveBdForm);
+  on('bdList', 'click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.bdedit != null) { openBdForm(+b.dataset.bdedit); $('bdForm').scrollIntoView({ block: 'start' }); }
+    if (b.dataset.bddel != null && confirm('Remove this breakdown entry?')) { bdList().splice(+b.dataset.bddel, 1); save(); renderAll(); }
+  });
   on('spCancel', 'click', function () { $('spForm').hidden = true; spEditing = -1; });
   on('spForm', 'submit', saveSpForm);
   on('spSearch', 'input', function (e) { spSearch = e.target.value; renderStock(); });
