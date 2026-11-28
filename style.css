@@ -60,6 +60,12 @@ h1 .hl{color:#ffb98a}
 .kpi .v{font-family:var(--f-head);font-size:clamp(24px,3.4vw,32px);font-weight:700;line-height:1.1;margin-top:4px}
 .kpi .v.bad{color:#f87171}.kpi .v.ok{color:#4ade80}.kpi .v.warn{color:#fbbf24}
 
+/* Hero: headline beside the IoT drawing */
+.hero-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:12px 32px;align-items:center}
+.hero-iot{display:block;width:100%;height:auto}
+@media (max-width:860px){.hero-top{grid-template-columns:minmax(0,1fr)}.hero-iot{max-width:480px}}
+@media print{.hero-iot{display:none}}
+
 /* Sections and panels */
 main section{padding-top:32px;scroll-margin-top:8px}
 .intro{color:var(--muted);max-width:72ch;margin-bottom:14px}

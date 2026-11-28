@@ -178,3 +178,10 @@
   spares 71% of spend, penalty covers about 2% of the loss. Slides also
   mention SAP import and the shared database. Next: Data Keeper sets up
   Supabase and sends the Project URL and publishable key for config.js.
+- Look update (Claude): images/iot-warehouse.svg, an original drawing of
+  IoT-linked stores (RFID-tagged spares on racks, a dumper and a drill with
+  sensors, gateway, cloud, dashboard screen), shown beside the headline at
+  the top of the page (below it on phones, hidden when printing). The MDP
+  slides now use a sunrise-over-warehouse cover and a warm dawn background
+  with a warehouse skyline strip instead of dark slides (slides are a
+  claude.ai artifact, not in this repository). Next: Supabase set-up.
